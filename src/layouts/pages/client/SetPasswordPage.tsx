@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { Lock, Eye, EyeOff } from "lucide-react";
 import apiClient from "../../../api/Axios";
 
 export default function SetPasswordPage() {
@@ -11,21 +12,28 @@ export default function SetPasswordPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async () => {
-    //  Validation
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] =
+    useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
     if (!token) {
-      alert("Invalid or missing token");
+      setError("Invalid or missing token");
       return;
     }
 
     if (!password || !confirmPassword) {
-      alert("Please fill all fields");
+      setError("Please fill all fields");
       return;
     }
 
     if (password !== confirmPassword) {
-      alert("Passwords do not match");
+      setError("Passwords do not match");
       return;
     }
 
@@ -37,53 +45,119 @@ export default function SetPasswordPage() {
         password,
       });
 
-      alert("Password set successfully");
-
       navigate("/login");
     } catch (err: any) {
-      console.error(err);
-      alert(err?.response?.data?.message || "Error setting password");
+      setError(
+        err?.response?.data?.message ||
+          "Error setting password"
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="h-screen flex items-center justify-center bg-slate-100">
-      <div className="bg-white p-6 rounded-md shadow-md w-96">
-        <h2 className="text-lg font-semibold mb-4">
-          Set Your Password
-        </h2>
+    <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
+      <div className="w-full max-w-md rounded-xl bg-white shadow-lg p-8">
+        {/* Header */}
+        <div className="text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100">
+            <Lock className="h-6 w-6 text-indigo-600" />
+          </div>
 
-        <p className="mb-4 text-sm text-slate-600">
-          Enter and confirm your new password.
-        </p>
+          <h2 className="mt-4 text-2xl font-bold text-slate-900">
+            Set Password
+          </h2>
 
-        {/* Password */}
-        <input
-          type="password"
-          placeholder="Enter new password"
-          className="w-full border p-2 rounded mb-3"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+          <p className="mt-1 text-sm text-slate-500">
+            Create your new password
+          </p>
+        </div>
 
-        {/* Confirm Password */}
-        <input
-          type="password"
-          placeholder="Confirm password"
-          className="w-full border p-2 rounded mb-4"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-        />
+        {/* Error */}
+        {error && (
+          <div className="mt-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            {error}
+          </div>
+        )}
 
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          className="w-full bg-indigo-600 text-white py-2 rounded"
-        >
-          {loading ? "Saving..." : "Set Password"}
-        </button>
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+          {/* Password */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700">
+              New Password
+            </label>
+
+            <div className="relative mt-1">
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                disabled={loading}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 pr-10 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 disabled:bg-slate-100"
+              />
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShowPassword((prev) => !prev)
+                }
+                className="absolute inset-y-0 right-2 flex items-center text-slate-400 hover:text-slate-600"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Confirm Password */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700">
+              Confirm Password
+            </label>
+
+            <div className="relative mt-1">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                required
+                disabled={loading}
+                value={confirmPassword}
+                onChange={(e) =>
+                  setConfirmPassword(e.target.value)
+                }
+                className="w-full rounded-md border border-slate-300 px-3 py-2 pr-10 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 disabled:bg-slate-100"
+              />
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShowConfirmPassword((prev) => !prev)
+                }
+                className="absolute inset-y-0 right-2 flex items-center text-slate-400 hover:text-slate-600"
+              >
+                {showConfirmPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Submit */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="flex w-full items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition disabled:opacity-50"
+          >
+            {loading ? "Saving..." : "Set Password"}
+          </button>
+        </form>
       </div>
     </div>
   );

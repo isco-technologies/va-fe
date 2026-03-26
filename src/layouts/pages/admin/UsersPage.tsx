@@ -6,12 +6,7 @@ import Pagination from "../../../components/Pagination";
 import UserForm from "../../../components/UserForm";
 import { useAppDispatch } from "../../../feature/hooks/useAppDispatch";
 import { useAppSelector } from "../../../feature/hooks/useAppSelector";
-import {
-  fetchUsers,
-  addUser,
-  updateUser,
-  deleteUser,
-} from "../../../feature/users/userSlice";
+import {fetchUsers,addUser,updateUser,deleteUser,} from "../../../feature/users/userSlice";
 import { fetchCompanies } from "../../../feature/company/companySlice";
 import type { User as UserType, UserRole } from "../../../types";
 

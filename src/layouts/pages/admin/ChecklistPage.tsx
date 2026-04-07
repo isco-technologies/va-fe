@@ -88,7 +88,7 @@ export default function ChecklistPage() {
     }
   };
 
-  // 🔥 FIXED NAVIGATION (THIS WAS YOUR BUG)
+  // FIXED NAVIGATION
   const openDomains = (checklistId: string) => {
     navigate(`/admin/checklists/${checklistId}/domains`);
   };

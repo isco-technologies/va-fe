@@ -9,6 +9,7 @@ import AssessmentPage from "../layouts/pages/admin/AssessmentPage";
 import ClientAssessmentPage from "../layouts/pages/client/ClientAssessmentPage";
 import { useAuthStore } from "../feature/store/authStore";
 import SetPasswordPage from "../layouts/pages/client/SetPasswordPage";
+import LandingPage from "../layouts/pages/admin/LandingPage";
 
 const getAuth = () => {
   const state = useAuthStore.getState();
@@ -20,6 +21,7 @@ const getAuth = () => {
 
 const router = createBrowserRouter([
   // PUBLIC
+  {path: "/", element: <LandingPage />},
   { path: "/login", element: <Login /> },
   { path: "/set-password", element: <SetPasswordPage /> },
   { path: "/unauthorized", element: <div>Unauthorized</div> },

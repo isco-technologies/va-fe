@@ -1,23 +1,21 @@
 import { Navigate, Outlet } from "react-router-dom";
+import { useAuthStore } from "../feature/store/authStore";
 
 type Props = {
-  isAuthenticated: boolean;
-  role?: string;
   allowedRoles?: string[];
 };
 
-export default function ProtectedRoute({
-  isAuthenticated,
-  role,
-  allowedRoles,
-}: Props) {
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
+export default function ProtectedRoute({ allowedRoles }: Props) {
+  const { token, user } = useAuthStore();
 
-  if (allowedRoles && role && !allowedRoles.includes(role)) {
+  const isAuthenticated = !!token;
+  const role = user?.role;
+
+  if (!isAuthenticated) {
     return <Navigate to="/landingPage" replace />;
   }
-
+  if (allowedRoles && role && !allowedRoles.includes(role)) {
+    return <Navigate to="/unauthorized" replace />;
+  }
   return <Outlet />;
 }

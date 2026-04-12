@@ -43,6 +43,7 @@ export default function ClientAssessmentPage() {
 
   const [openDomains, setOpenDomains] = useState<Record<string, boolean>>({});
   const [openControls, setOpenControls] = useState<Record<string, boolean>>({});
+  //const [answers, setAnswers] = useState<Record<string, { answer: string; remark?: string }>>({});
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 1;
@@ -67,8 +68,31 @@ export default function ClientAssessmentPage() {
         : Array.isArray(data.data)
         ? data.data
         : [];
+        
+        //
+        const updated = await Promise.all(
+        safeArray.map(async (a: any) => {
+          try {
+            const [detailsRes, answersRes] = await Promise.all([
+              apiClient.get(`/assessments/${a.id}/details`),
+              apiClient.get(`/assessment-answers/${a.id}`),
+            ]);
 
-      setAssessments(safeArray);
+            const domains =
+              detailsRes.data.domains || detailsRes.data || [];
+
+            const answers = answersRes.data.data || [];
+
+            const progress = calculateProgress(domains, answers);
+
+            return { ...a, progress };
+          } catch {
+            return { ...a, progress: 0 };
+          }
+        })
+      );
+
+      setAssessments(updated);
     } catch (err) {
       console.error(err);
       setAssessments([]);
@@ -76,28 +100,81 @@ export default function ClientAssessmentPage() {
   };
 
   const openAssessment = async (assessment: Assessment) => {
-    try {
-      setLoading(true);
-      setSelectedAssessment(assessment);
+  try {
+    setLoading(true);
+    setSelectedAssessment(assessment);
 
-      const res = await apiClient.get(`/assessments/${assessment.id}/details`);
-      const data = res.data;
+    const [detailsRes, answersRes] = await Promise.all([
+      apiClient.get(`/assessments/${assessment.id}/details`),
+      apiClient.get(`/assessment-answers/${assessment.id}`),
+    ]);
 
-      const safeDomains = Array.isArray(data)
-        ? data
-        : Array.isArray(data.domains)
-        ? data.domains
-        : [];
+    const details = detailsRes.data;
+    const answers = answersRes.data.data || []; 
 
-      setDomains(safeDomains);
-      setCurrentPage(1);
-    } catch (err) {
-      console.error(err);
-      setDomains([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const safeDomains = Array.isArray(details)
+      ? details
+      : Array.isArray(details.domains)
+      ? details.domains
+      : [];
+
+    
+    const answerMap: Record<string, { answer: string; remark?: string }> = {};
+
+    answers.forEach((a: any) => {
+      if (a.control) {
+        answerMap[`control-${a.control.id}`] = {
+          answer: a.answer,
+          remark: a.remark,
+        };
+      }
+      if (a.domain) {
+        answerMap[`domain-${a.domain.id}`] = {
+          answer: a.answer,
+          remark: a.remark,
+        };
+      }
+    });
+
+    
+    const mappedDomains = safeDomains.map((domain: any) => {
+      const domainAnswer = answerMap[`domain-${domain.id}`];
+
+      return {
+        ...domain,
+
+        // DOMAIN QUESTIONS
+        questions: domain.questions?.map((q: any) => ({
+          ...q,
+          answer: domainAnswer?.answer,
+          remark: domainAnswer?.remark,
+        })),
+
+        // CONTROLS
+        controls: domain.controls.map((control: any) => {
+          const controlAnswer = answerMap[`control-${control.id}`];
+
+          return {
+            ...control,
+            questions: control.questions.map((q: any) => ({
+              ...q,
+              answer: controlAnswer?.answer,
+              remark: controlAnswer?.remark,
+            })),
+          };
+        }),
+      };
+    });
+
+    setDomains(mappedDomains);
+    setCurrentPage(1);
+  } catch (err) {
+    console.error(err);
+    setDomains([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleAnswer = async (
     questionId: string,
@@ -145,6 +222,37 @@ export default function ClientAssessmentPage() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+  
+const calculateProgress = (domains: any[], answers: any[]) => {
+  if (!domains.length) return 0;
+
+  let total = 0;
+  let answered = 0;
+
+  const answerMap: Record<string, boolean> = {};
+
+  answers.forEach((a) => {
+    if (a.control) answerMap[`control-${a.control.id}`] = true;
+    if (a.domain) answerMap[`domain-${a.domain.id}`] = true;
+  });
+
+  domains.forEach((d) => {
+    // Domain-level
+    if (d.questions?.length > 0) {
+      total += 1;
+      if (answerMap[`domain-${d.id}`]) answered += 1;
+    }
+
+    // Controls
+    d.controls.forEach((c: any) => {
+      total += 1;
+      if (answerMap[`control-${c.id}`]) answered += 1;
+    });
+  });
+
+  return total === 0 ? 0 : Math.round((answered / total) * 100);
+};
+
 
   return (
     <AppLayout>
@@ -455,7 +563,7 @@ export default function ClientAssessmentPage() {
                       <td className="px-4 py-3">
                         <div className="bg-gray-200 rounded-full h-2">
                           <div
-                            className="bg-blue-600 h-2 rounded-full"
+                            className="bg-orange-600 h-2 rounded-full"
                             style={{ width: `${a.progress}%` }}
                           />
                         </div>

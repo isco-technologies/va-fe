@@ -8,6 +8,7 @@ import {fetchAssessments,createAssessment,} from "../../../feature/assessments/a
 import { fetchCompanies } from "../../../feature/company/companySlice";
 import { fetchChecklists } from "../../../feature/checklists/checklistSlice";
 
+
 const Assessments = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();

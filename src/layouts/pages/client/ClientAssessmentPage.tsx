@@ -7,7 +7,7 @@ type Assessment = {
   id: string;
   checklist: { name: string };
   company: { name: string };
-  status: "DRAFT" | "IN_PROGRESS" | "COMPLETED";
+  status: "PENDING" | "IN_PROGRESS" | "COMPLETED";
   progress: number;
 };
 
@@ -43,7 +43,6 @@ export default function ClientAssessmentPage() {
 
   const [openDomains, setOpenDomains] = useState<Record<string, boolean>>({});
   const [openControls, setOpenControls] = useState<Record<string, boolean>>({});
-  //const [answers, setAnswers] = useState<Record<string, { answer: string; remark?: string }>>({});
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 1;
@@ -68,31 +67,8 @@ export default function ClientAssessmentPage() {
         : Array.isArray(data.data)
         ? data.data
         : [];
-        
-        //
-        const updated = await Promise.all(
-        safeArray.map(async (a: any) => {
-          try {
-            const [detailsRes, answersRes] = await Promise.all([
-              apiClient.get(`/assessments/${a.id}/details`),
-              apiClient.get(`/assessment-answers/${a.id}`),
-            ]);
 
-            const domains =
-              detailsRes.data.domains || detailsRes.data || [];
-
-            const answers = answersRes.data.data || [];
-
-            const progress = calculateProgress(domains, answers);
-
-            return { ...a, progress };
-          } catch {
-            return { ...a, progress: 0 };
-          }
-        })
-      );
-
-      setAssessments(updated);
+      setAssessments(safeArray);
     } catch (err) {
       console.error(err);
       setAssessments([]);
@@ -100,81 +76,75 @@ export default function ClientAssessmentPage() {
   };
 
   const openAssessment = async (assessment: Assessment) => {
-  try {
-    setLoading(true);
-    setSelectedAssessment(assessment);
+    try {
+      setLoading(true);
+      setSelectedAssessment(assessment);
 
-    const [detailsRes, answersRes] = await Promise.all([
-      apiClient.get(`/assessments/${assessment.id}/details`),
-      apiClient.get(`/assessment-answers/${assessment.id}`),
-    ]);
+      const [detailsRes, answersRes] = await Promise.all([
+        apiClient.get(`/assessments/${assessment.id}/details`),
+        apiClient.get(`/assessment-answers/${assessment.id}`),
+      ]);
 
-    const details = detailsRes.data;
-    const answers = answersRes.data.data || []; 
+      const details = detailsRes.data;
+      const answers = answersRes.data.data || [];
 
-    const safeDomains = Array.isArray(details)
-      ? details
-      : Array.isArray(details.domains)
-      ? details.domains
-      : [];
+      const safeDomains = Array.isArray(details)
+        ? details
+        : Array.isArray(details.domains)
+        ? details.domains
+        : [];
 
-    
-    const answerMap: Record<string, { answer: string; remark?: string }> = {};
+      const answerMap: Record<string, { answer: string; remark?: string }> = {};
 
-    answers.forEach((a: any) => {
-      if (a.control) {
-        answerMap[`control-${a.control.id}`] = {
-          answer: a.answer,
-          remark: a.remark,
-        };
-      }
-      if (a.domain) {
-        answerMap[`domain-${a.domain.id}`] = {
-          answer: a.answer,
-          remark: a.remark,
-        };
-      }
-    });
-
-    
-    const mappedDomains = safeDomains.map((domain: any) => {
-      const domainAnswer = answerMap[`domain-${domain.id}`];
-
-      return {
-        ...domain,
-
-        // DOMAIN QUESTIONS
-        questions: domain.questions?.map((q: any) => ({
-          ...q,
-          answer: domainAnswer?.answer,
-          remark: domainAnswer?.remark,
-        })),
-
-        // CONTROLS
-        controls: domain.controls.map((control: any) => {
-          const controlAnswer = answerMap[`control-${control.id}`];
-
-          return {
-            ...control,
-            questions: control.questions.map((q: any) => ({
-              ...q,
-              answer: controlAnswer?.answer,
-              remark: controlAnswer?.remark,
-            })),
+      answers.forEach((a: any) => {
+        if (a.control) {
+          answerMap[`control-${a.control.id}`] = {
+            answer: a.answer,
+            remark: a.remark,
           };
-        }),
-      };
-    });
+        }
+        if (a.domain) {
+          answerMap[`domain-${a.domain.id}`] = {
+            answer: a.answer,
+            remark: a.remark,
+          };
+        }
+      });
 
-    setDomains(mappedDomains);
-    setCurrentPage(1);
-  } catch (err) {
-    console.error(err);
-    setDomains([]);
-  } finally {
-    setLoading(false);
-  }
-};
+      const mappedDomains = safeDomains.map((domain: any) => {
+        const domainAnswer = answerMap[`domain-${domain.id}`];
+
+        return {
+          ...domain,
+          questions: domain.questions?.map((q: any) => ({
+            ...q,
+            answer: domainAnswer?.answer,
+            remark: domainAnswer?.remark,
+          })),
+          controls: domain.controls.map((control: any) => {
+            const controlAnswer = answerMap[`control-${control.id}`];
+
+            return {
+              ...control,
+              questions: control.questions.map((q: any) => ({
+                ...q,
+                answer: controlAnswer?.answer,
+                remark: controlAnswer?.remark,
+              })),
+            };
+          }),
+        };
+      });
+
+      setDomains(mappedDomains);
+      setCurrentPage(1);
+    } catch (err) {
+      console.error(err);
+      setDomains([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAnswer = async (
     questionId: string,
@@ -211,6 +181,27 @@ export default function ClientAssessmentPage() {
           })),
         }))
       );
+
+      const refreshed = await apiClient.get("/assessments/client");
+      const refreshedData = refreshed.data;
+
+      const safeArray = Array.isArray(refreshedData)
+        ? refreshedData
+        : Array.isArray(refreshedData.assessments)
+        ? refreshedData.assessments
+        : Array.isArray(refreshedData.data)
+        ? refreshedData.data
+        : [];
+
+      setAssessments(safeArray);
+
+      const updatedSelected = safeArray.find(
+        (a: Assessment) => a.id === selectedAssessment?.id
+      );
+
+      if (updatedSelected) {
+        setSelectedAssessment(updatedSelected);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -222,37 +213,18 @@ export default function ClientAssessmentPage() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
-  
-const calculateProgress = (domains: any[], answers: any[]) => {
-  if (!domains.length) return 0;
 
-  let total = 0;
-  let answered = 0;
+  const filteredAssessments = assessments.filter((a) => {
+    const matchesSearch =
+      a.company?.name?.toLowerCase().includes(search.toLowerCase()) ||
+      a.checklist?.name?.toLowerCase().includes(search.toLowerCase());
 
-  const answerMap: Record<string, boolean> = {};
+    const matchesTab =
+      activeTab === "all" ||
+      a.status.toLowerCase() === activeTab.toLowerCase();
 
-  answers.forEach((a) => {
-    if (a.control) answerMap[`control-${a.control.id}`] = true;
-    if (a.domain) answerMap[`domain-${a.domain.id}`] = true;
+    return matchesSearch && matchesTab;
   });
-
-  domains.forEach((d) => {
-    // Domain-level
-    if (d.questions?.length > 0) {
-      total += 1;
-      if (answerMap[`domain-${d.id}`]) answered += 1;
-    }
-
-    // Controls
-    d.controls.forEach((c: any) => {
-      total += 1;
-      if (answerMap[`control-${c.id}`]) answered += 1;
-    });
-  });
-
-  return total === 0 ? 0 : Math.round((answered / total) * 100);
-};
-
 
   return (
     <AppLayout>
@@ -267,9 +239,29 @@ const calculateProgress = (domains: any[], answers: any[]) => {
             </button>
 
             <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
-              <h1 className="text-xl font-semibold text-slate-800">
-                {selectedAssessment.checklist?.name}
-              </h1>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-xl font-semibold text-slate-800">
+                    {selectedAssessment.checklist?.name}
+                  </h1>
+                  <p className="text-sm text-slate-500 mt-1">
+                    {selectedAssessment.company?.name}
+                  </p>
+                </div>
+
+                <div className="min-w-[180px]">
+                  <p className="text-xs text-slate-500 mb-1">Progress</p>
+                  <div className="bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-orange-600 h-2 rounded-full"
+                      style={{ width: `${selectedAssessment.progress || 0}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {selectedAssessment.progress || 0}%
+                  </p>
+                </div>
+              </div>
             </div>
 
             {loading ? (
@@ -523,7 +515,7 @@ const calculateProgress = (domains: any[], answers: any[]) => {
               />
 
               <div className="flex gap-6 border-b whitespace-nowrap">
-                {["all", "draft", "in_progress", "completed"].map((tab) => (
+                {["all", "PENDING", "IN_PROGRESS", "COMPLETED"].map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -551,7 +543,7 @@ const calculateProgress = (domains: any[], answers: any[]) => {
                 </thead>
 
                 <tbody>
-                  {assessments.map((a) => (
+                  {filteredAssessments.map((a) => (
                     <tr
                       key={a.id}
                       onClick={() => openAssessment(a)}
@@ -564,14 +556,23 @@ const calculateProgress = (domains: any[], answers: any[]) => {
                         <div className="bg-gray-200 rounded-full h-2">
                           <div
                             className="bg-orange-600 h-2 rounded-full"
-                            style={{ width: `${a.progress}%` }}
+                            style={{ width: `${a.progress || 0}%` }}
                           />
                         </div>
+                        <span className="text-xs text-gray-500">
+                          {a.progress || 0}%
+                        </span>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+
+              {filteredAssessments.length === 0 && (
+                <div className="p-4 text-center text-gray-400">
+                  No assessments found
+                </div>
+              )}
             </div>
           </div>
         )}

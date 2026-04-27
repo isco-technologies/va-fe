@@ -5,13 +5,7 @@ import ChecklistTable from "../../../components/ChecklistTable";
 import ChecklistModal from "../../../components/ChecklistModal";
 import { useAppDispatch } from "../../../feature/hooks/useAppDispatch";
 import { useAppSelector } from "../../../feature/hooks/useAppSelector";
-import {
-  fetchChecklists,
-  addChecklist,
-  editChecklist,
-  removeChecklist,
-  setChecklistSearch,
-} from "../../../feature/checklists/checklistSlice";
+import {fetchChecklists,addChecklist,editChecklist,removeChecklist,setChecklistSearch,} from "../../../feature/checklists/checklistSlice";
 import type { Checklists } from "../../../api/checklistAPI";
 
 export default function ChecklistPage() {
@@ -144,6 +138,7 @@ export default function ChecklistPage() {
         {/* TABLE */}
         {!isLoading && !error && (
           <ChecklistTable
+            
             items={filtered}
             onOpenDomains={openDomains}
             onEdit={openEdit}

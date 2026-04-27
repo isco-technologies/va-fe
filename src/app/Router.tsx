@@ -10,7 +10,9 @@ import ClientAssessmentPage from "../layouts/pages/client/ClientAssessmentPage";
 import { useAuthStore } from "../feature/store/authStore";
 import SetPasswordPage from "../layouts/pages/client/SetPasswordPage";
 import LandingPage from "../layouts/pages/admin/LandingPage";
+import AdminAssessmentReviewPage from "../layouts/pages/admin/AdminAssessmentReview"; // ✅ fixed path
 
+// AUTH HELPER
 const getAuth = () => {
   const state = useAuthStore.getState();
   return {
@@ -20,13 +22,13 @@ const getAuth = () => {
 };
 
 const router = createBrowserRouter([
-  // PUBLIC
-  {path: "/", element: <LandingPage />},
+  // ================= PUBLIC =================
+  { path: "/", element: <LandingPage /> },
   { path: "/login", element: <Login /> },
   { path: "/set-password", element: <SetPasswordPage /> },
   { path: "/unauthorized", element: <div>Unauthorized</div> },
 
-  // ADMIN 
+  // ================= ADMIN =================
   {
     path: "/admin",
     element: (
@@ -36,10 +38,11 @@ const router = createBrowserRouter([
       />
     ),
     children: [
+      // 
+      { index: true, element: <Navigate to="assessment" replace /> },
+
       { path: "assessment", element: <AssessmentPage /> },
       { path: "companies", element: <CompanyPage /> },
-
-      // LIST
       { path: "checklists", element: <ChecklistPage /> },
 
       // DETAILS
@@ -48,11 +51,16 @@ const router = createBrowserRouter([
         element: <ChecklistDomainPage />,
       },
 
+      {
+        path: "assessments/:assessmentId/review",
+        element: <AdminAssessmentReviewPage />,
+      },
+
       { path: "users", element: <UsersPage /> },
     ],
   },
 
-  //CLIENT 
+  // ================= CLIENT =================
   {
     path: "/client",
     element: (
@@ -62,21 +70,24 @@ const router = createBrowserRouter([
       />
     ),
     children: [
+      
+      { index: true, element: <Navigate to="assessment" replace /> },
+
       { path: "assessment", element: <ClientAssessmentPage /> },
     ],
   },
 
-  //  DEFAULT 
+  // ================= FALLBACK =================
   {
     path: "*",
     element: (() => {
       const { isAuthenticated, role } = getAuth();
 
-      if (!isAuthenticated) return <Navigate to="/login" />;
+      if (!isAuthenticated) return <Navigate to="/login" replace />;
 
       return role === "CLIENT"
-        ? <Navigate to="/client/assessment" />
-        : <Navigate to="/admin/assessment" />;
+        ? <Navigate to="/client/assessment" replace />
+        : <Navigate to="/admin/assessment" replace />;
     })(),
   },
 ]);

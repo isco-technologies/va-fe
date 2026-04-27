@@ -43,7 +43,7 @@ const Sidebar = () => {
             </NavLink>
 
             <NavLink to="/admin/assessment" className={navStyle}>
-              <ClipboardList /> Assessments
+              <ClipboardList /> Assessments & Reviews 
             </NavLink>
 
             <NavLink to="/admin/companies" className={navStyle}>

@@ -52,7 +52,7 @@ const Assessments = () => {
 
       if (id) {
         setOpenModal(false);
-        navigate(`/assessments/${id}`);
+        navigate(`/admin/assessments/${id}/review`);
       }
     } finally {
       setCreating(false);
@@ -100,7 +100,7 @@ const Assessments = () => {
             <tr
               key={a.id}
               className="border-t hover:bg-gray-50 cursor-pointer"
-              onClick={() => navigate(`/assessments/${a.id}`)}
+              onClick={() => navigate(`/admin/assessments/${a.id}/review`)}
             >
               <td className="px-4 py-3">{a.company.name}</td>
               <td className="px-4 py-3">{a.checklist.name}</td>

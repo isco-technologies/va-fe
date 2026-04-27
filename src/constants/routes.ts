@@ -8,12 +8,16 @@ export const ROUTES = {
   ADMIN_ASSESSMENTS: "/admin/assessment",
   ADMIN_COMPANIES: "/admin/companies",
   ADMIN_CHECKLISTS: "/admin/checklists",
-  ADMIN_CHECKLIST_DOMAINS: "/admin/checklist-domains",
   ADMIN_USERS: "/admin/users",
-  ADMIN_FINDINGS: "/admin/findings",
+
+
+  ADMIN_CHECKLIST_DOMAINS: (checklistId: string) =>
+    `/admin/checklists/${checklistId}/domains`,
+
+  ADMIN_ASSESSMENT_REVIEW: (assessmentId: string) =>
+    `/admin/assessments/${assessmentId}/review`,
 
   // CLIENT
   CLIENT_DASHBOARD: "/client/assessment",
   CLIENT_ASSESSMENT: "/client/assessment",
-  CLIENT_REPORTS: "/client/reports",
 };

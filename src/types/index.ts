@@ -14,7 +14,9 @@ export interface Company {
   email?: string;
   phone?: string;
   address?: string;
+  status: "active" | "inactive";
   location?: string;
+  contacts: User[];
 
   contactEmail?: string;
   contactPhone?: string;

@@ -69,7 +69,9 @@ const CompanyForm: React.FC<Props> = ({
       address,
       email: contactEmail,
       phone: contactPhone,
-      location: address
+      location: address,
+      status: "active",
+      contacts: []
     });
   };
 

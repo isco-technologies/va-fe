@@ -96,23 +96,23 @@ const CompanyCard = ({ company, onEdit }: Props) => {
               </p>
 
               {/* Example extra fields */}
-              {company.email && (
+              
                 <p>
                   <strong>Email:</strong> {company.email}
+                  {company.contactEmail && ` (${company.contactEmail})`}
                 </p>
-              )}
-
-              {company.phone && (
+              
                 <p>
                   <strong>Phone:</strong> {company.phone}
+                  {company.contactPhone && ` (${company.contactPhone})`}
                 </p>
-              )}
+              
 
-              {company.address && (
+              {/*company.address && (
                 <p>
                   <strong>Address:</strong> {company.address}
                 </p>
-              )}
+              )*/}
 
             </div>
 

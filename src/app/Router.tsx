@@ -1,19 +1,95 @@
-import { createBrowserRouter } from "react-router-dom";
-import { LandingPage } from "../layouts/pages/LandingPage";
-import Login  from "../auth/Login"; 
-import CompanyPage from "../layouts/pages/CompanyPage";
-import AssessmentPage from "../layouts/pages/AssessmentPage";
-import ChecklistPage from "../layouts/pages/ChecklistPage";
-import ChecklistDomainPage from "../layouts/pages/ChecklistDomainPage";
-// import { AssessmentForm } from "../assessments/AssessmentForm"; // later
+import { createBrowserRouter, Navigate } from "react-router-dom";
+import ProtectedRoute from "./ProtectedRoute";
+import Login from "../auth/Login";
+import CompanyPage from "../layouts/pages/admin/CompanyPage";
+import ChecklistPage from "../layouts/pages/admin/ChecklistPage";
+import ChecklistDomainPage from "../layouts/pages/admin/ChecklistDomainPage";
+import UsersPage from "../layouts/pages/admin/UsersPage";
+import AssessmentPage from "../layouts/pages/admin/AssessmentPage";
+import ClientAssessmentPage from "../layouts/pages/client/ClientAssessmentPage";
+import { useAuthStore } from "../feature/store/authStore";
+import SetPasswordPage from "../layouts/pages/client/SetPasswordPage";
+import LandingPage from "../layouts/pages/admin/LandingPage";
+import AdminAssessmentReviewPage from "../layouts/pages/admin/AdminAssessmentReview"; // ✅ fixed path
 
+// AUTH HELPER
+const getAuth = () => {
+  const state = useAuthStore.getState();
+  return {
+    isAuthenticated: !!state.token,
+    role: state.user?.role,
+  };
+};
 
-export const router = createBrowserRouter([
+const router = createBrowserRouter([
+  // ================= PUBLIC =================
   { path: "/", element: <LandingPage /> },
   { path: "/login", element: <Login /> },
-  {path:"/companyPage", element: <CompanyPage />},
-  {path:"/AssessmentPage", element: <AssessmentPage />},
-  {path:"/checklists", element: <ChecklistPage />},
-  {path:"/checklists/:checklistId/domains", element: <ChecklistDomainPage />},
-  // { path: "/app", element: <AssessmentForm /> },
+  { path: "/set-password", element: <SetPasswordPage /> },
+  { path: "/unauthorized", element: <div>Unauthorized</div> },
+
+  // ================= ADMIN =================
+  {
+    path: "/admin",
+    element: (
+      <ProtectedRoute
+        {...getAuth()}
+        allowedRoles={["ADMIN", "SUPER_ADMIN"]}
+      />
+    ),
+    children: [
+      // 
+      { index: true, element: <Navigate to="assessment" replace /> },
+
+      { path: "assessment", element: <AssessmentPage /> },
+      { path: "companies", element: <CompanyPage /> },
+      { path: "checklists", element: <ChecklistPage /> },
+
+      // DETAILS
+      {
+        path: "checklists/:checklistId/domains",
+        element: <ChecklistDomainPage />,
+      },
+
+      {
+        path: "assessments/:assessmentId/review",
+        element: <AdminAssessmentReviewPage />,
+      },
+
+      { path: "users", element: <UsersPage /> },
+    ],
+  },
+
+  // ================= CLIENT =================
+  {
+    path: "/client",
+    element: (
+      <ProtectedRoute
+        {...getAuth()}
+        allowedRoles={["CLIENT"]}
+      />
+    ),
+    children: [
+      
+      { index: true, element: <Navigate to="assessment" replace /> },
+
+      { path: "assessment", element: <ClientAssessmentPage /> },
+    ],
+  },
+
+  // ================= FALLBACK =================
+  {
+    path: "*",
+    element: (() => {
+      const { isAuthenticated, role } = getAuth();
+
+      if (!isAuthenticated) return <Navigate to="/login" replace />;
+
+      return role === "CLIENT"
+        ? <Navigate to="/client/assessment" replace />
+        : <Navigate to="/admin/assessment" replace />;
+    })(),
+  },
 ]);
+
+export default router;

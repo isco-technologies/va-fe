@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import apiClient from "../../api/Axios";
-import AppLayout from "../appLayout";
-import DomainRow from "../../components/build/DomainRow";
-import ChecklistPreview from "../../components/build/PreviewModal";
-import AddDomainModal from "../../components/build/AddDomainModal";
-import Pagination from "../../components/Pagination";
+import apiClient from "../../../api/Axios";
+import AppLayout from "../../appLayout";
+import DomainRow from "../../../components/build/DomainRow";
+import ChecklistPreview from "../../../components/build/PreviewModal";
+import AddDomainModal from "../../../components/build/AddDomainModal";
+import Pagination from "../../../components/Pagination";
 
 type Checklist = {
   id: string;

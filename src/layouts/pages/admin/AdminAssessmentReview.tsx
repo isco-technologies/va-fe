@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import AppLayout from "../../appLayout";
 import apiClient from "../../../api/Axios";
-import { ChevronRight, ChevronDown, } from "lucide-react";
+import { ChevronRight, ChevronDown, X } from "lucide-react";
 import { useParams } from "react-router-dom";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type Question = {
   id: string;
   text: string;
   answer?: string;
   remark?: string;
-  controlTitle?: string | null; 
+  controlTitle?: string | null;
 };
 
 type Control = {
@@ -26,6 +27,40 @@ type Domain = {
   questions?: Question[];
 };
 
+type Field = {
+  id: string;
+  label: string;
+  type: "text" | "textarea" | "select" | "number" | "file";
+  options?: string[];
+  required?: boolean;
+};
+
+// ─── Template ─────────────────────────────────────────────────────────────────
+
+const template: { fields: Field[] } = {
+  fields: [
+    { id: "title", label: "Title", type: "text", required: true },
+    {
+      id: "severity",
+      label: "Severity",
+      type: "select",
+      options: ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+      required: true,
+    },
+    { id: "toolName", label: "Tool Name", type: "text", required: true },
+    { id: "cvssScore", label: "CVSS Score", type: "number" },
+    { id: "description", label: "Description", type: "textarea" },
+    { id: "impact", label: "Impact", type: "textarea" },
+    { id: "recommendation", label: "Recommendation", type: "textarea" },
+    { id: "evidence", label: "Evidence", type: "textarea" },
+    { id: "reference", label: "Reference", type: "text" },
+    { id: "affectedSystems", label: "Affected Systems", type: "text" },
+    { id: "attachment", label: "Attachment", type: "file" },
+  ],
+};
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function AdminAssessmentReviewPage() {
   const { assessmentId } = useParams();
 
@@ -35,38 +70,49 @@ export default function AdminAssessmentReviewPage() {
   const [loading, setLoading] = useState(true);
   const [currentDomainIndex, setCurrentDomainIndex] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
-  const [search, setSearch] = useState("");
+  const [customFields, setCustomFields] = useState<Field[]>([]);
+  const [showCustomModal, setShowCustomModal] = useState(false);
+  const [findings, setFindings] = useState<any[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  const [form, setForm] = useState({
-    toolName: "",
-    title: "",
-    description: "",
-    severity: "LOW",
-    cvssScore: "",
-    cvssVector: "",
-    affectedSystems: "",
-    affectedUrls: "",
-    impact: "",
-    recommendation: "",
-    evidence: "",
-    reference: "",
-    domainId: "",
-    controlId: "",
+  const [newField, setNewField] = useState<{
+    id: string;
+    label: string;
+    type: Field["type"];
+    required: boolean;
+  }>({
+    id: "",
+    label: "",
+    type: "text",
+    required: false,
   });
+
+  const requiredFields = template.fields
+    .filter((field) => field.required)
+    .map((field) => field.id);
+
+  const [selectedFields, setSelectedFields] = useState<string[]>(requiredFields);
+  const [values, setValues] = useState<Record<string, any>>({});
+
+  // ── Effects ────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [assessmentId]);
 
   useEffect(() => {
     setIsOpen(false);
   }, [currentDomainIndex]);
 
+  // ── Fetch ──────────────────────────────────────────────────────────────────
+
   const fetchData = async () => {
     try {
-      const res = await apiClient.get(
-        `/admin/assessments/${assessmentId}/review`
-      );
+      setLoading(true);
+
+      const res = await apiClient.get(`/admin/assessments/${assessmentId}/review`);
 
       if (Array.isArray(res.data)) {
         setDomains(res.data);
@@ -75,342 +121,527 @@ export default function AdminAssessmentReviewPage() {
         setAssessmentName(res.data.assessmentName || "");
         setCompanyName(res.data.companyName || "");
       }
+
+      const findingsRes = await apiClient.get(
+        `/technical-findings/assessment/${assessmentId}`
+      );
+      setFindings(findingsRes.data.data || []);
     } catch (err) {
-      console.error(err);
+      console.error("Failed to fetch review data:", err);
     } finally {
       setLoading(false);
     }
   };
 
+//derived
   const domain = domains[currentDomainIndex];
 
-  // preserve controls info
   const allQuestions = useMemo(() => {
     if (!domain) return [];
 
-    return [
-      ...(domain.questions || []).map((q) => ({
-        ...q,
-        controlTitle: null,
-      })),
+    const domainQuestions =
+      domain.questions?.map((q) => ({ ...q, controlTitle: null })) || [];
 
-      ...(domain.controls || []).flatMap((c) =>
-        (c.questions || []).map((q) => ({
+    const controlQuestions =
+      domain.controls?.flatMap((control) =>
+        (control.questions || []).map((q) => ({
           ...q,
-          controlTitle: c.title,
+          controlTitle: control.title,
         }))
-      ),
-    ];
+      ) || [];
+
+    return [...domainQuestions, ...controlQuestions];
   }, [domain]);
 
-  const controlsCount = domain?.controls?.length || 0;
-  const handleChange = (e: any) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  // Handlers 
+  const addField = (fieldId: string) => {
+    if (selectedFields.includes(fieldId)) return;
+    setSelectedFields((prev) => [...prev, fieldId]);
   };
+
+  const removeField = (fieldId: string) => {
+    if (requiredFields.includes(fieldId)) return;
+    setSelectedFields((prev) => prev.filter((id) => id !== fieldId));
+    setValues((prev) => {
+      const updated = { ...prev };
+      delete updated[fieldId];
+      return updated;
+    });
+  };
+
+  const updateValue = (fieldId: string, value: any) => {
+    setValues((prev) => ({ ...prev, [fieldId]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitError(null);
+    setSubmitSuccess(false);
+    setSubmitting(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("assessmentId", assessmentId || "");
+      formData.append("domainId", domain?.id || "");
+      formData.append("templateId", "default-template");
+
+      Object.entries(values).forEach(([key, value]) => {
+        if (value instanceof File) {
+          formData.append(key, value);
+        } else if (value !== undefined && value !== null && value !== "") {
+          formData.append(key, String(value));
+        }
+      });
+
+      const res = await apiClient.post("/technical-findings", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      // Reset form values, keep selected fields
+      setValues({});
+      setSubmitSuccess(true);
+
+      // Refresh findings list
+      setFindings((prev) => [res.data.data, ...prev]);
+
+      setTimeout(() => setSubmitSuccess(false), 3000);
+    } catch (err: any) {
+      const message =
+        err.response?.data?.message || "Something went wrong. Please try again.";
+      setSubmitError(message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleAddCustomField = () => {
+    if (!newField.label.trim()) return;
+    const field: Field = {
+      ...newField,
+      id: newField.label.toLowerCase().replace(/\s+/g, "-"),
+    };
+    setCustomFields((prev) => [...prev, field]);
+    setSelectedFields((prev) => [...prev, field.id]);
+    setNewField({ id: "", label: "", type: "text", required: false });
+    setShowCustomModal(false);
+  };
+
+  
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6 max-w-5xl mx-auto">
+      <div className="p-6 space-y-6 max-w-6xl mx-auto">
+
         {/* HEADER */}
         <div>
           <h1 className="text-xl font-semibold text-slate-900">
             Assessment Review
           </h1>
           <p className="text-sm text-slate-500">
-            Review client responses and add findings
+            Review client responses and add technical findings.
           </p>
         </div>
 
-        {loading && <p className="text-sm text-slate-500">Loading...</p>}
+        {loading && (
+          <div className="bg-white border rounded-xl p-6 text-sm text-slate-500">
+            Loading assessment review...
+          </div>
+        )}
+
         {!loading && domains.length === 0 && (
-          <p className="text-sm text-slate-500">No data available</p>
+          <div className="bg-white border rounded-xl p-6 text-sm text-slate-500">
+            No review data found for this assessment.
+          </div>
         )}
 
         {!loading && domain && (
           <>
             {/* TOP CARD */}
-            <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
               <h2 className="text-lg font-semibold text-slate-900">
                 {assessmentName || "Assessment"}
               </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                {companyName || "Client"}
+              <p className="text-sm text-slate-500">
+                {companyName || "No company name"}
               </p>
             </div>
 
             {/* DOMAIN CARD */}
-            <div className="bg-white rounded-xl border border-slate-200">
-              <div
+            <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+              <button
+                type="button"
                 onClick={() => setIsOpen((prev) => !prev)}
-                className="flex items-center justify-between p-5 cursor-pointer hover:bg-blue-100 transition"
+                className="w-full flex justify-between items-center p-5 hover:bg-blue-50 transition text-left"
               >
                 <div className="flex items-center gap-3">
                   {isOpen ? (
-                    <ChevronDown className="h-4 w-4 text-slate-500" />
+                    <ChevronDown size={20} className="text-slate-500" />
                   ) : (
-                    <ChevronRight className="h-4 w-4 text-slate-500" />
+                    <ChevronRight size={20} className="text-slate-500" />
                   )}
-
                   <div>
                     <p className="text-xs text-slate-400">
-                      Domain {currentDomainIndex + 1}
+                      Domain {currentDomainIndex + 1} of {domains.length}
                     </p>
-                    <h3 className="text-lg font-medium text-slate-900">
-                      {domain.name}
-                    </h3>
+                    <h3 className="font-medium text-slate-900">{domain.name}</h3>
                   </div>
                 </div>
-
                 <span className="text-xs text-slate-500">
-                  {controlsCount} controls
+                  {allQuestions.length} question(s)
                 </span>
-              </div>
+              </button>
 
-              {/* CONTENT */}
               {isOpen && (
-                <div className="px-5 pb-5">
-                  <div className="mt-3 rounded-lg bg-slate-50 p-5 border border-slate-100">
-                    {allQuestions.length === 0 ? (
-                      <p className="text-sm text-slate-500">
-                        No questions available
-                      </p>
-                    ) : (
-                      <SingleQuestionCarousel questions={allQuestions} />
-                    )}
-                  </div>
+                <div className="border-t border-slate-200 p-5">
+                  <SingleQuestionCarousel questions={allQuestions} />
                 </div>
               )}
             </div>
 
-            {/* FINDING FORM */}
-            {/*add search */}
-            <div className="flex items-center  gap-3">
-                <h2 className="text-lg font-semibold text-slate-900">
-                    Search Questions 
-                </h2>   
-                <input
-                    type="text"
-                    placeholder="Search questions..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)} 
-                    className="border px-3 py-2 rounded-md w-64"
-                />
-            </div>
-
-            <div className="bg-green-50 rounded-xl border border-slate-200 p-5">
-                <h3 className="text-lg font-medium text-slate-900">
-                    Add External Finding
-                </h3>
-                <p className="text-sm text-slate-500">
-                    Add a new finding based on the client's responses
-                </p>
-                <form className="mt-5 space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700">
-                            Tool Name
-                        </label>
-                        <input
-                            type="text"
-                            value={form.toolName}
-                            onChange={(e) => setForm({ ...form, toolName: e.target.value })}
-                            className="mt-1 rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700">
-                            Title
-                        </label>
-                        <input
-                            name="text"
-                            placeholder="Title of the finding"  
-                            value={form.title}
-                            onChange={handleChange}
-                            className="mt-1 rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
-                        />
-
-                        <select
-                        name="severity"
-                        value={form.severity}
-                        onChange={handleChange} 
-                        className="mt-1 rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
-                        >
-                            <option value="LOW">LOW</option>
-                            <option value="MEDIUM">MEDIUM</option>
-                            <option value="HIGH">HIGH</option>
-                            <option value="CRITICAL">CRITICAL</option>
-                        </select>
-
-                        <input
-                            name="cvssScore"
-                            placeholder="CVSS Score"  
-                            value={form.cvssScore}
-                            onChange={handleChange}
-                            className="mt-1 rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
-                        />
-                        <div 
-                        className="text-sm text-slate-500 mt-1">
-                           <label className="block text-sm font-medium text-slate-700">
-                           Description
-                           </label> 
-                           <textarea
-                            name="description"
-                            placeholder="Description of the finding"  
-                            value={form.description}
-                            onChange={handleChange}
-                            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
-                        >
-                        </textarea>
-                        </div>
-                        <label className="block text-sm font-medium text-slate-700">
-                            Recommendation
-                        </label>
-                        <textarea
-                        name="recommendations"
-                        placeholder="Recommended remediation steps"
-                        value={form.recommendation}
-                        onChange={handleChange}
-                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
-                        />
-                        <label className="block text-sm font-medium text-slate-700">
-                            Evidence
-                        </label>
-                        <textarea                        name="evidence"
-                        placeholder="Evidence supporting the finding"
-                        value={form.evidence} 
-                        onChange={handleChange}
-                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
-                        />
-                        <label className="block text-sm font-medium text-slate-700">
-                            Reference
-                        </label>
-                        <input  
-                        name="reference"
-                        placeholder="Reference URL or document"
-                        value={form.reference}
-                        onChange={handleChange}
-                        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
-                        />  
-                          <label className="block text-sm font-medium text-slate-700">
-                            Affected Systems
-                        </label>
-                        <input
-                          name="URLs"
-                          placeholder="Comma-separated list of affected URLs or systems"
-                          value={form.affectedSystems}
-                          onChange={handleChange}
-                          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
-                          />
-                    </div>
-                    <button
-                        type="submit"
-                        className="bg-indigo-600 text-white px-4 py-2 rounded-md"
-                    >   
-                        Add Finding
-
-                    </button>
-                </form>
-            </div>
-          </>
-        )}
-
-         {/* NAVIGATION */}
-            <div className="flex items-center justify-between">
+            {/* ADD CUSTOM FIELDS BUTTON */}
+            <div className="ml-auto flex justify-end">
               <button
+                type="button"
+                onClick={() => setShowCustomModal(true)}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+              >
+                + Add Fields
+              </button>
+            </div>
+
+            {/* CUSTOM FIELD MODAL */}
+            {showCustomModal && (
+              <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+                <div className="bg-white p-6 rounded-lg w-full max-w-md space-y-4">
+                  <h3 className="font-medium text-slate-900">Add Custom Field</h3>
+
+                  <input
+                    placeholder="Field name"
+                    className="w-full border border-slate-300 px-3 py-2 rounded-lg outline-none focus:ring-2 focus:ring-indigo-200 text-sm"
+                    value={newField.label}
+                    onChange={(e) => {
+                      const label = e.target.value;
+                      setNewField((prev) => ({
+                        ...prev,
+                        label,
+                        id: label.toLowerCase().replace(/\s+/g, "-"),
+                      }));
+                    }}
+                  />
+
+                  <select
+                    className="w-full border border-slate-300 px-3 py-2 rounded-lg outline-none focus:ring-2 focus:ring-indigo-200 text-sm"
+                    value={newField.type}
+                    onChange={(e) =>
+                      setNewField((prev) => ({
+                        ...prev,
+                        type: e.target.value as Field["type"],
+                      }))
+                    }
+                  >
+                    <option value="text">Text</option>
+                    <option value="textarea">Textarea</option>
+                    <option value="number">Number</option>
+                  </select>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleAddCustomField}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                    >
+                      Add Field
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomModal(false)}
+                      className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg text-sm font-medium"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* FIELD SELECTOR */}
+            <div className="bg-green-50 p-5 rounded-xl border border-slate-200 shadow-sm">
+              <h3 className="font-medium text-slate-900 mb-3">
+                Select Finding Fields
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {[...template.fields, ...customFields].map((field) => {
+                  const selected = selectedFields.includes(field.id);
+                  return (
+                    <button
+                      key={field.id}
+                      type="button"
+                      disabled={selected}
+                      onClick={() => addField(field.id)}
+                      className={`px-3 py-1.5 border rounded-full text-sm transition ${
+                        selected
+                          ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                          : "bg-white hover:bg-blue-50 text-slate-700"
+                      }`}
+                    >
+                      {selected ? "✓" : "+"} {field.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* FINDINGS FORM */}
+            <form
+              onSubmit={handleSubmit}
+              className="bg-green-100 p-5 rounded-xl border border-green-200 space-y-4"
+            >
+              <div>
+                <h3 className="font-medium text-slate-900">Add Finding</h3>
+                <p className="text-sm text-slate-500">
+                  Add technical assessment findings for this domain.
+                </p>
+              </div>
+
+              {/* SUCCESS BANNER */}
+              {submitSuccess && (
+                <div className="bg-green-600 text-white text-sm px-4 py-3 rounded-lg">
+                  Finding added successfully.
+                </div>
+              )}
+
+              {/* ERROR BANNER */}
+              {submitError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg flex justify-between items-center">
+                  <span>{submitError}</span>
+                  <button
+                    type="button"
+                    onClick={() => setSubmitError(null)}
+                    className="ml-4 text-red-400 hover:text-red-600"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
+
+              {selectedFields.map((fieldId) => {
+                const field =
+                  template.fields.find((f) => f.id === fieldId) ||
+                  customFields.find((f) => f.id === fieldId);
+
+                if (!field) return null;
+
+                const isRequired = requiredFields.includes(field.id);
+
+                return (
+                  <div
+                    key={field.id}
+                    className="relative bg-white p-4 rounded-lg border border-slate-200"
+                  >
+                    {!isRequired && (
+                      <button
+                        type="button"
+                        onClick={() => removeField(field.id)}
+                        className="absolute top-3 right-3 text-slate-400 hover:text-red-500"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
+
+                    <label className="text-sm font-medium text-slate-700 block mb-1">
+                      {field.label}
+                      {isRequired && (
+                        <span className="text-red-500 ml-1">*</span>
+                      )}
+                    </label>
+
+                    {field.type === "text" && (
+                      <input
+                        value={values[field.id] || ""}
+                        required={field.required}
+                        className="w-full border border-slate-300 px-3 py-2 rounded-lg outline-none focus:ring-2 focus:ring-indigo-200"
+                        onChange={(e) => updateValue(field.id, e.target.value)}
+                      />
+                    )}
+
+                    {field.type === "number" && (
+                      <input
+                        type="number"
+                        min={0}
+                        max={10}
+                        step={0.1}
+                        value={values[field.id] || ""}
+                        className="w-full border border-slate-300 px-3 py-2 rounded-lg outline-none focus:ring-2 focus:ring-indigo-200"
+                        onChange={(e) => updateValue(field.id, e.target.value)}
+                      />
+                    )}
+
+                    {field.type === "textarea" && (
+                      <textarea
+                        value={values[field.id] || ""}
+                        rows={4}
+                        className="w-full border border-slate-300 px-3 py-2 rounded-lg outline-none focus:ring-2 focus:ring-indigo-200 resize-none"
+                        onChange={(e) => updateValue(field.id, e.target.value)}
+                      />
+                    )}
+
+                    {field.type === "select" && (
+                      <select
+                        value={values[field.id] || ""}
+                        required={field.required}
+                        className="w-full border border-slate-300 px-3 py-2 rounded-lg outline-none focus:ring-2 focus:ring-indigo-200"
+                        onChange={(e) => updateValue(field.id, e.target.value)}
+                      >
+                        <option value="">Select {field.label}</option>
+                        {field.options?.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+
+                    {field.type === "file" && (
+                      <div className="space-y-2">
+                        <input
+                          type="file"
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-200"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            updateValue(field.id, file);
+                          }}
+                        />
+                        {values[field.id] && (
+                          <p className="text-xs text-slate-500">
+                            Selected: {values[field.id].name}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium"
+              >
+                {submitting ? "Saving..." : "Add Finding"}
+              </button>
+            </form>
+
+            {/* DOMAIN NAVIGATION */}
+            <div className="flex justify-between items-center">
+              <button
+                type="button"
+                disabled={currentDomainIndex === 0}
                 onClick={() =>
                   setCurrentDomainIndex((i) => Math.max(i - 1, 0))
                 }
-                disabled={currentDomainIndex === 0}
-                className="px-5 py-2 text-sm border border-slate-300 rounded-md text-slate-500 disabled:opacity-50 bg-white"
+                className="px-4 py-2 border rounded-lg text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"
               >
-                ← Previous
+                ← Previous Domain
               </button>
 
-              <span className="text-sm text-slate-500">
-                Page {currentDomainIndex + 1} of {domains.length}
-              </span>
+              <p className="text-sm text-slate-500">
+                {currentDomainIndex + 1} / {domains.length}
+              </p>
 
               <button
+                type="button"
+                disabled={currentDomainIndex === domains.length - 1}
                 onClick={() =>
                   setCurrentDomainIndex((i) =>
                     Math.min(i + 1, domains.length - 1)
                   )
                 }
-                disabled={currentDomainIndex === domains.length - 1}
-                className="px-5 py-2 text-sm border border-slate-300 rounded-md text-slate-700 disabled:opacity-50 bg-white"
+                className="px-4 py-2 border rounded-lg text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50"
               >
-                Next →
+                Next Domain →
               </button>
             </div>
-
-        {!loading && !domain && (
-            <p className="text-sm text-slate-500">No domain data available</p>
+          </>
         )}
       </div>
     </AppLayout>
   );
 }
 
+
+
 function SingleQuestionCarousel({ questions }: { questions: Question[] }) {
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [index, setIndex] = useState(0);
 
   useEffect(() => {
-    setCurrentQuestionIndex(0);
+    setIndex(0);
   }, [questions]);
 
-  const q = questions[currentQuestionIndex];
-  if (!q) return null;
+  if (questions.length === 0) {
+    return (
+      <div className="text-sm text-slate-500">
+        No client questions found for this domain.
+      </div>
+    );
+  }
+
+  const question = questions[index];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
+      <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+        <div className="flex justify-between items-start gap-4 mb-3">
+          <div>
+            <p className="text-xs text-slate-400">
+              Question {index + 1} of {questions.length}
+            </p>
+            {question.controlTitle && (
+              <p className="text-xs font-medium text-indigo-600 mt-1">
+                Control: {question.controlTitle}
+              </p>
+            )}
+          </div>
 
-      {/* SHOW CONTROL */}
-      {q.controlTitle && (
-        <p className="text-xs text-slate-400">{q.controlTitle}</p>
-      )}
-
-      <p className="text-base font-medium text-slate-900">{q.text}</p>
-
-      <div className="space-y-1 text-sm">
-        <p>
-          <span className="text-slate-500">Answer:</span>{" "}
-          <span className="font-medium text-slate-900">
-            {q.answer || "N/A"}
+          <span
+            className={`text-xs px-2 py-1 rounded-full font-medium ${
+              question.answer === "YES"
+                ? "bg-green-100 text-green-700"
+                : question.answer === "NO"
+                ? "bg-red-100 text-red-700"
+                : question.answer === "NA"
+                ? "bg-slate-200 text-slate-700"
+                : "bg-yellow-100 text-yellow-700"
+            }`}
+          >
+            {question.answer || "Not answered"}
           </span>
-        </p>
+        </div>
 
-        {q.remark && (
-          <p>
-            <span className="text-slate-500">Remark:</span>{" "}
-            <span className="text-slate-700">{q.remark}</span>
-          </p>
-        )}
+        <p className="font-medium text-slate-900 mb-3">{question.text}</p>
+
+        <div className="text-sm text-slate-600">
+          <span className="font-medium">Remark:</span>{" "}
+          {question.remark || "No remark provided"}
+        </div>
       </div>
 
-      <div className="flex items-center justify-between pt-3">
+      <div className="flex justify-between items-center">
         <button
-          onClick={() =>
-            setCurrentQuestionIndex((i) => Math.max(i - 1, 0))
-          }
-          disabled={currentQuestionIndex === 0}
-          className="px-4 py-2 text-sm border border-slate-300 rounded-md text-slate-500 disabled:opacity-50 bg-white"
+          type="button"
+          disabled={index === 0}
+          onClick={() => setIndex((i) => Math.max(i - 1, 0))}
+          className="px-3 py-2 border rounded-lg text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white"
         >
-          ← Previous
+          ← Previous Question
         </button>
 
-        <span className="text-sm text-slate-500">
-          {currentQuestionIndex + 1} / {questions.length}
-        </span>
-
         <button
-          onClick={() =>
-            setCurrentQuestionIndex((i) =>
-              Math.min(i + 1, questions.length - 1)
-            )
-          }
-          disabled={currentQuestionIndex === questions.length - 1}
-          className="px-4 py-2 text-sm border border-slate-300 rounded-md text-slate-700 disabled:opacity-50 bg-white"
+          type="button"
+          disabled={index === questions.length - 1}
+          onClick={() => setIndex((i) => Math.min(i + 1, questions.length - 1))}
+          className="px-3 py-2 border rounded-lg text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white"
         >
-          Next →
+          Next Question →
         </button>
       </div>
     </div>

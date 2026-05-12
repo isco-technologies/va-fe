@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { NavLink, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import {Building2,ClipboardList,LogOut,LayoutDashboard,ListTodo,FileDown,CircleArrowOutDownRight,User2Icon,ShieldAlert,} from "lucide-react";
+import {Building2,ClipboardList,LogOut,LayoutDashboard,ListTodo,FileDown,LucideClipboardClock,User2Icon,ShieldAlert,} from "lucide-react";
 import { useAuthStore } from "../feature/store/authStore";
 
 const navStyle = ({ isActive }: any) =>
@@ -26,13 +28,13 @@ const Sidebar = () => {
   return (
     <aside className="w-64 h-screen bg-slate-900 text-slate-100 flex flex-col">
 
-      {/* ================= LOGO ================= */}
+      {/* LOGO  */}
       <div className="px-6 py-5 text-xl font-bold text-indigo-200 border-b border-slate-800 flex items-center gap-2">
         <ShieldAlert className="h-6 w-6" />
         VA Platform
       </div>
 
-      {/* ================= NAV ================= */}
+      {/* NAV */}
       <nav className="flex-1 px-3 space-y-1">
 
         {/* ADMIN */}
@@ -58,8 +60,8 @@ const Sidebar = () => {
               <User2Icon /> Users
             </NavLink>
 
-            <NavLink to="/admin/findings" className={navStyle}>
-              <CircleArrowOutDownRight /> Findings
+            <NavLink to="/admin/reports/" className={navStyle}>
+              <LucideClipboardClock /> Reports
             </NavLink>
           </>
         )}
@@ -82,7 +84,7 @@ const Sidebar = () => {
         )}
       </nav>
 
-      {/* ================= USER PROFILE ================= */}
+      {/* USER PROFILE */}
       {user && (
         <div className="border-t border-slate-800 p-4">
           <div className="relative">

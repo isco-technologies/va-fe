@@ -10,7 +10,10 @@ import ClientAssessmentPage from "../layouts/pages/client/ClientAssessmentPage";
 import { useAuthStore } from "../feature/store/authStore";
 import SetPasswordPage from "../layouts/pages/client/SetPasswordPage";
 import LandingPage from "../layouts/pages/admin/LandingPage";
-import AdminAssessmentReviewPage from "../layouts/pages/admin/AdminAssessmentReview"; // ✅ fixed path
+import AdminAssessmentReviewPage from "../layouts/pages/admin/AdminAssessmentReview"; 
+import AdminReportPage from "../layouts/pages/admin/AdminReportPage";
+import CompanyReportsPage from "../layouts/pages/admin/CompanyReportPage";
+import AssessmentReportPage from "../layouts/pages/admin/AssessmentReportPage";
 
 // AUTH HELPER
 const getAuth = () => {
@@ -22,13 +25,13 @@ const getAuth = () => {
 };
 
 const router = createBrowserRouter([
-  // ================= PUBLIC =================
+  //PUBLIC 
   { path: "/", element: <LandingPage /> },
   { path: "/login", element: <Login /> },
   { path: "/set-password", element: <SetPasswordPage /> },
   { path: "/unauthorized", element: <div>Unauthorized</div> },
 
-  // ================= ADMIN =================
+  //  ADMIN 
   {
     path: "/admin",
     element: (
@@ -44,6 +47,14 @@ const router = createBrowserRouter([
       { path: "assessment", element: <AssessmentPage /> },
       { path: "companies", element: <CompanyPage /> },
       { path: "checklists", element: <ChecklistPage /> },
+      { path: "reports", element: <AdminReportPage /> },
+      { path: "reports/assessment/:assessmentId", element: <AssessmentReportPage /> },
+      { path: "reports/company/:companyId", element: <CompanyReportsPage /> },
+      {path: "dashboard", element: <LandingPage />}, // Temporary dashboard route
+      
+
+
+      
 
       // DETAILS
       {
@@ -60,7 +71,7 @@ const router = createBrowserRouter([
     ],
   },
 
-  // ================= CLIENT =================
+  // CLIENT 
   {
     path: "/client",
     element: (
@@ -77,7 +88,7 @@ const router = createBrowserRouter([
     ],
   },
 
-  // ================= FALLBACK =================
+  // FALLBACK 
   {
     path: "*",
     element: (() => {

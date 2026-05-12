@@ -52,6 +52,7 @@ export default function ChecklistPage() {
   const handleSubmit = async (data: {
     name: string;
     description?: string | null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     status: any;
   }) => {
     try {

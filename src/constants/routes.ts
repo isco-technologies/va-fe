@@ -9,8 +9,11 @@ export const ROUTES = {
   ADMIN_COMPANIES: "/admin/companies",
   ADMIN_CHECKLISTS: "/admin/checklists",
   ADMIN_USERS: "/admin/users",
-
-
+  ADMIN_REPORTS: "/admin/reports",
+  ADMIN_COMPANY_REPORT: (companyId: string) => `/admin/reports/companies/${companyId}`,
+  ADMIN_ASSESSMENT_REPORT: (assessmentId: string) => `/admin/reports/assessment/${assessmentId}`, 
+  
+  
   ADMIN_CHECKLIST_DOMAINS: (checklistId: string) =>
     `/admin/checklists/${checklistId}/domains`,
 

@@ -1,74 +1,137 @@
 // src/components/ChecklistTable.tsx
+
+import { Pencil, Archive, ExternalLink } from "lucide-react";
 import StatusBadge from "./StatusBadge";
+import type { Checklists } from "../api/checklistAPI";
 
 type Props = {
-  items: any[];
+  items: Checklists[];
   onOpenDomains: (checklistId: string) => void;
-  onEdit: (item: any) => void;
-  onDelete: (id: string) => void;
+  onEdit: (item: Checklists) => void;
+  onArchive: (id: string) => void;
 };
 
-export default function ChecklistTable({ items, onOpenDomains, onEdit, onDelete }: Props) {
+export default function ChecklistTable({
+  items,
+  onOpenDomains,
+  onEdit,
+  onArchive,
+}: Props) {
   return (
-    <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
-      <table className="min-w-full text-sm">
-        <thead className="bg-slate-50 text-left text-slate-700">
-          <tr>
-            <th className="px-6 py-3 font-semibold">Name</th>
-            <th className="px-6 py-3 font-semibold">Description</th>
-            <th className="px-6 py-3 font-semibold">Domains</th>
-            <th className="px-6 py-3 font-semibold">Status</th>
-            <th className="px-6 py-3 font-semibold text-right">Actions</th>
+    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <table className="min-w-full">
+
+        {/* HEADER */}
+        <thead>
+          <tr className="bg-gray-50 border-b border-gray-200">
+            <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Name
+            </th>
+            <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Description
+            </th>
+            <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Domains
+            </th>
+            <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Controls
+            </th>
+            <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Status
+            </th>
+            <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Actions
+            </th>
           </tr>
         </thead>
 
-        <tbody className="divide-y">
-          {items.length === 0 ? (
-            <tr>
-              <td className="px-6 py-6 text-slate-500" colSpan={5}>
-                No checklists found.
-              </td>
-            </tr>
-          ) : (
-            items.map((c) => (
-              <tr key={c.id} className="hover:bg-slate-50">
-                <td className="px-6 py-4">
+        {/* BODY */}
+        <tbody className="divide-y divide-gray-100">
+          {items.map((c) => {
+            const archived = c.status === "ARCHIVED";
+
+            return (
+              <tr
+                key={c.id}
+                className="hover:bg-gray-50 transition-colors group"
+              >
+
+                {/* NAME */}
+                <td className="px-5 py-3.5">
                   <button
                     onClick={() => onOpenDomains(c.id)}
-                    className="font-semibold text-indigo-700 hover:underline"
-                    title="Open domains for this checklist"
+                    className="flex items-center gap-1.5 font-medium text-indigo-600 hover:text-indigo-800 transition-colors group/link"
+                    title="Open domains"
                   >
                     {c.name}
+                    <ExternalLink className="h-3.5 w-3.5 opacity-0 group-hover/link:opacity-100 transition-opacity" />
                   </button>
                 </td>
-                <td className="px-6 py-4 text-slate-600">{c.description || "—"}</td>
-                <td className="px-6 py-4">
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700">
-                    {c.domainCount ?? 0}
+
+                {/* DESCRIPTION */}
+                <td className="px-5 py-3.5 max-w-xs">
+                  <p className="text-sm text-gray-500 truncate">
+                    {c.description || (
+                      <span className="text-gray-300">—</span>
+                    )}
+                  </p>
+                </td>
+
+                {/* DOMAIN COUNT */}
+                <td className="px-5 py-3.5">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                    {c.domainCount ?? 0} domains
                   </span>
                 </td>
-                <td className="px-6 py-4">
+
+                {/* CONTROL COUNT */}
+                <td className="px-5 py-3.5">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+                    {c.controlCount ?? 0} controls
+                  </span>
+                </td>
+
+                {/* STATUS */}
+                <td className="px-5 py-3.5">
                   <StatusBadge status={c.status} />
                 </td>
-                <td className="px-6 py-4">
-                  <div className="flex justify-end gap-2">
+
+                {/* ACTIONS */}
+                <td className="px-5 py-3.5">
+                  <div className="flex justify-end items-center gap-2  group-hover:opacity-100 transition-opacity">
+
+                    {/* EDIT */}
                     <button
                       onClick={() => onEdit(c)}
-                      className="rounded-lg border px-3 py-1.5 hover:bg-slate-50"
+                      disabled={archived}
+                      title={archived ? "Cannot edit archived checklist" : "Edit checklist"}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                        archived
+                          ? "cursor-not-allowed opacity-40 border-gray-200 text-gray-400"
+                          : "border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-800"
+                      }`}
                     >
+                      <Pencil className="h-3.5 w-3.5" />
                       Edit
                     </button>
-                    <button
-                      onClick={() => onDelete(c.id)}
-                      className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-red-700 hover:bg-red-100"
-                    >
-                      Delete
-                    </button>
+
+                    {/* ARCHIVE */}
+                    {!archived && (
+                      <button
+                        onClick={() => onArchive(c.id)}
+                        title="Archive checklist"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
+                      >
+                        <Archive className="h-3.5 w-3.5" />
+                        Archive
+                      </button>
+                    )}
                   </div>
                 </td>
+
               </tr>
-            ))
-          )}
+            );
+          })}
         </tbody>
       </table>
     </div>

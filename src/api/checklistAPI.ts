@@ -1,47 +1,95 @@
+import axios from "./Axios";
 
-import  axios  from "./Axios";
+// STATUS
 
-export type ChecklistStatus = "ACTIVE" | "DRAFT" | "ARCHIVED";
+export type ChecklistStatus =
+  | "ACTIVE"
+  | "INACTIVE"
+  | "ARCHIVED";
+
+// MODEL
 
 export interface Checklists {
   id: string;
+
   name: string;
+
   description?: string | null;
+
   status: ChecklistStatus;
+
   createdAt?: string;
+
   updatedAt?: string;
-  // optional field to hold count of domains, not from backend but useful for frontend
+
+  // computed fields from backend
+
   domainCount?: number;
+
+  controlCount?: number;
 }
+
+// CREATE DTO
 
 export interface CreateChecklistDto {
   name: string;
+
   description?: string | null;
-  status?: ChecklistStatus;
 }
+
+// UPDATE DTO
 
 export interface UpdateChecklistDto {
   name?: string;
+
   description?: string | null;
-  status?: ChecklistStatus;
 }
+
+// GET ALL
 
 export async function getChecklists(): Promise<Checklists[]> {
-  const res = await axios.get("/checklists");
+  const res = await axios.get(
+    "/checklists"
+  );
+
   return res.data;
 }
 
-export async function createChecklist(payload: CreateChecklistDto): Promise<Checklists> {
-  const res = await axios.post("/checklists", payload);
+// CREATE
+
+export async function createChecklist(
+  payload: CreateChecklistDto
+): Promise<Checklists> {
+  const res = await axios.post(
+    "/checklists",
+    payload
+  );
+
   return res.data;
 }
 
-export async function updateChecklist(id: string, payload: UpdateChecklistDto): Promise<Checklists> {
-  const res = await axios.patch(`/checklists/${id}`, payload);
+// UPDATE
+
+export async function updateChecklist(
+  id: string,
+  payload: UpdateChecklistDto
+): Promise<Checklists> {
+  const res = await axios.put(
+    `/checklists/${id}`,
+    payload
+  );
+
   return res.data;
 }
 
-export async function deleteChecklist(id: string): Promise<{ message: string }> {
-  const res = await axios.delete(`/checklists/${id}`);
+// ARCHIVE
+
+export async function archiveChecklist(
+  id: string
+): Promise<Checklists> {
+  const res = await axios.patch(
+    `/checklists/${id}/archive`
+  );
+
   return res.data;
 }

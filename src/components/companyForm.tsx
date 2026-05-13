@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useEffect, useState } from "react";
 import type { Company } from "../types";
 import Select from "react-select";
@@ -27,7 +28,7 @@ const CompanyForm: React.FC<Props> = ({
   onSubmit,
 }) => {
   const [name, setName] = useState("");
-  const [industry, setIndustry] = useState<any>(null);
+  const [industry, setIndustry] = useState<{ value: string; label: string } | null>(null);
   const [description, setDescription] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
@@ -53,7 +54,7 @@ const CompanyForm: React.FC<Props> = ({
       setContactPhone("");
       setAddress("");
     }
-  }, [company]);
+  }, [company, isOpen]);
 
   if (!isOpen) return null;
 
@@ -70,13 +71,13 @@ const CompanyForm: React.FC<Props> = ({
       email: contactEmail,
       phone: contactPhone,
       location: address,
-      status: "active",
-      contacts: []
+      contacts: [],
+      status: "ACTIVE"
     });
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6">
 
         <h2 className="text-xl font-semibold mb-4">

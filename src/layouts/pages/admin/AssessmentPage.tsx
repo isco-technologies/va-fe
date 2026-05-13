@@ -1,26 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Clipboard,
-  ShieldAlert,
-  AlertTriangle,
-  CheckCircle2,
-  Plus,
-} from "lucide-react";
-
+import {Clipboard,ShieldAlert,AlertTriangle,CheckCircle2,Plus,} from "lucide-react";
 import AppLayout from "../../appLayout";
-
 import { useAppDispatch } from "../../../feature/hooks/useAppDispatch";
 import { useAppSelector } from "../../../feature/hooks/useAppSelector";
 
-import {
-  fetchAssessments,
-  createAssessment,
-} from "../../../feature/assessments/assessmentSlice";
-
+import {fetchAssessments,createAssessment,} from "../../../feature/assessments/assessmentSlice";
 import { fetchCompanies } from "../../../feature/company/companySlice";
-
 import { fetchChecklists } from "../../../feature/checklists/checklistSlice";
 
 const Assessments = () => {
@@ -102,22 +89,16 @@ const Assessments = () => {
 
   // STATS
 
-  const calculateStats = (
-  assessment: any
-) => {
-  const findings =
-    assessment.findings || [];
-
-  const critical =
+  const calculateStats = (assessment: any) => {const findings = assessment.findings || [];
+const critical =
     findings.filter(
       (f: any) =>
         f.severity ===
         "CRITICAL"
     ).length;
 
-  const high =
-    findings.filter(
-      (f: any) =>
+  const high = findings.filter(
+(f: any) =>
         f.severity ===
         "HIGH"
     ).length;
@@ -144,11 +125,12 @@ const Assessments = () => {
     medium,
     low,
 
-    // USE BACKEND PROGRESS
+    // USE BACKEND VALUE
     progress:
       assessment.progress || 0,
   };
 };
+
   // FILTERS
 
   const filtered =
@@ -225,7 +207,7 @@ const Assessments = () => {
 
   // TABS
 
- const tabs = [
+  const tabs = [
     {
       key: "ALL",
       label: "All",
@@ -404,7 +386,7 @@ const Assessments = () => {
 
         {/* FILTERS */}
 
-       {/* <div className="bg-white border border-gray-200 rounded-3xl p-4 flex flex-col lg:flex-row gap-4 justify-between">
+        <div className="bg-white border border-gray-200 rounded-3xl p-4 flex flex-col lg:flex-row gap-4 justify-between">
 
           <div className="flex gap-2 flex-wrap">
 
@@ -452,7 +434,7 @@ const Assessments = () => {
             }
             className="border border-gray-200 rounded-2xl px-4 py-2 w-full lg:w-80 outline-none focus:ring-2 focus:ring-indigo-500"
           />
-        </div>*/}
+        </div>
 
         {/* TABLE */}
 

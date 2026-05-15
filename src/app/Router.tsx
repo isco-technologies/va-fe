@@ -14,6 +14,7 @@ import AdminAssessmentReviewPage from "../layouts/pages/admin/AdminAssessmentRev
 import AdminReportPage from "../layouts/pages/admin/AdminReportPage";
 import CompanyReportsPage from "../layouts/pages/admin/CompanyReportPage";
 import AssessmentReportPage from "../layouts/pages/admin/AssessmentReportPage";
+import AdminDashboard from "../layouts/pages/admin/AdminDashboardPage";
 
 // AUTH HELPER
 const getAuth = () => {
@@ -50,7 +51,7 @@ const router = createBrowserRouter([
       { path: "reports", element: <AdminReportPage /> },
       { path: "reports/assessment/:assessmentId", element: <AssessmentReportPage /> },
       { path: "reports/company/:companyId", element: <CompanyReportsPage /> },
-      {path: "dashboard", element: <LandingPage />}, // Temporary dashboard route
+      {path: "dashboard", element: <AdminDashboard />}, // Temporary dashboard route
       
 
 

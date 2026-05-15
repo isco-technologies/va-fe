@@ -4,7 +4,7 @@ export const ROUTES = {
   UNAUTHORIZED: "/unauthorized",
 
   // ADMIN
-  ADMIN_DASHBOARD: "/admin/assessment",
+  ADMIN_DASHBOARD: "/admin/dashboard",
   ADMIN_ASSESSMENTS: "/admin/assessment",
   ADMIN_COMPANIES: "/admin/companies",
   ADMIN_CHECKLISTS: "/admin/checklists",
@@ -12,6 +12,7 @@ export const ROUTES = {
   ADMIN_REPORTS: "/admin/reports",
   ADMIN_COMPANY_REPORT: (companyId: string) => `/admin/reports/companies/${companyId}`,
   ADMIN_ASSESSMENT_REPORT: (assessmentId: string) => `/admin/reports/assessment/${assessmentId}`, 
+  
   
   
   ADMIN_CHECKLIST_DOMAINS: (checklistId: string) =>

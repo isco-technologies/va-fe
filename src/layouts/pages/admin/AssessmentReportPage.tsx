@@ -1,623 +1,529 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import AppLayout from "../../appLayout";
 import apiClient from "../../../api/Axios";
 
-const SEVERITY: Record<
-  string,
-  {
-    text: string;
-    badge: string;
-    border: string;
-    bg: string;
-  }
-> = {
+const API_BASE = "http://localhost:4000";
+
+const SEVERITY: Record<string, { label: string; text: string; badge: string; border: string; soft: string; dot: string }> = {
   CRITICAL: {
-    text: "text-red-600",
-    badge: "bg-red-100 text-red-700",
-    border: "border-red-200",
-    bg: "bg-red-50",
+    label: "Critical",
+    text: "text-[#B91C1C]",
+    badge: "bg-[#FEF2F2] text-[#B91C1C] border border-[#FECACA]",
+    border: "border-l-[#B91C1C]",
+    soft: "bg-[#FEF2F2]",
+    dot: "bg-[#B91C1C]",
   },
-
   HIGH: {
-    text: "text-orange-600",
-    badge: "bg-orange-100 text-orange-700",
-    border: "border-orange-200",
-    bg: "bg-orange-50",
+    label: "High",
+    text: "text-[#C2410C]",
+    badge: "bg-[#FFF7ED] text-[#C2410C] border border-[#FED7AA]",
+    border: "border-l-[#C2410C]",
+    soft: "bg-[#FFF7ED]",
+    dot: "bg-[#C2410C]",
   },
-
   MEDIUM: {
-    text: "text-amber-600",
-    badge: "bg-amber-100 text-amber-700",
-    border: "border-amber-200",
-    bg: "bg-amber-50",
+    label: "Medium",
+    text: "text-[#B45309]",
+    badge: "bg-[#FFFBEB] text-[#B45309] border border-[#FDE68A]",
+    border: "border-l-[#B45309]",
+    soft: "bg-[#FFFBEB]",
+    dot: "bg-[#B45309]",
   },
-
   LOW: {
-    text: "text-emerald-600",
-    badge: "bg-emerald-100 text-emerald-700",
-    border: "border-emerald-200",
-    bg: "bg-emerald-50",
+    label: "Low",
+    text: "text-[#065F46]",
+    badge: "bg-[#ECFDF5] text-[#065F46] border border-[#A7F3D0]",
+    border: "border-l-[#065F46]",
+    soft: "bg-[#ECFDF5]",
+    dot: "bg-[#065F46]",
   },
 };
 
-const CATEGORY_TITLES: Record<
-  string,
-  string
-> = {
-  NETWORK:
-    "Network & Systems Findings",
-
-  WEB:
-    "Web Application Findings",
-
-  GOVERNANCE:
-    "Governance Findings",
+const CATEGORY_TITLES: Record<string, string> = {
+  NETWORK: "Network",
+  NETWORK_SECURITY: "Network Security",
+  WEB_APPLICATION: "Web Application",
+  CLOUD_SECURITY: "Cloud Security",
+  INFRASTRUCTURE: "Infrastructure",
+  ACCESS_CONTROL: "Access Control",
+  DATA_PROTECTION: "Data Protection",
+  GOVERNANCE: "Governance",
+  ENDPOINT_SECURITY: "Endpoint Security",
 };
+
+/* ── tiny helpers ── */
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-[10px] font-semibold tracking-[0.18em] uppercase text-[#9CA3AF] mb-3">
+      {children}
+    </p>
+  );
+}
 
 export default function AssessmentReportPage() {
-  const { assessmentId } =
-    useParams();
-
-  const [findings, setFindings] =
-    useState<any[]>([]);
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [filter, setFilter] =
-    useState<string | null>(null);
+  const { assessmentId } = useParams();
+  const [findings, setFindings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<string | null>(null);
 
   useEffect(() => {
     if (!assessmentId) return;
-
     apiClient
-      .get(
-        `/reports/assessment/${assessmentId}`
-      )
-
+      .get(`/reports/assessment/${assessmentId}`)
       .then((res) => {
-        const data =
-          res.data?.data || {};
-
-        const grouped =
-          data.groupedFindings ||
-          {};
-
-        const flattened =
-          Object.values(grouped).flat();
-
-        setFindings(
-          flattened as any[]
-        );
+        const data = res.data?.data || {};
+        const grouped = data.groupedFindings || data.categories || {};
+        setFindings(Object.values(grouped).flat() as any[]);
       })
-
-      .catch((err) => {
-        console.error(err);
-        setFindings([]);
-      })
-
-      .finally(() =>
-        setLoading(false)
-      );
+      .catch((err) => { console.error(err); setFindings([]); })
+      .finally(() => setLoading(false));
   }, [assessmentId]);
 
-  const stats = {
-    CRITICAL:
-      findings.filter(
-        (f) =>
-          f.severity ===
-          "CRITICAL"
-      ).length,
+  const stats = useMemo(() => ({
+    CRITICAL: findings.filter((f) => f.severity === "CRITICAL").length,
+    HIGH: findings.filter((f) => f.severity === "HIGH").length,
+    MEDIUM: findings.filter((f) => f.severity === "MEDIUM").length,
+    LOW: findings.filter((f) => f.severity === "LOW").length,
+  }), [findings]);
 
-    HIGH:
-      findings.filter(
-        (f) =>
-          f.severity === "HIGH"
-      ).length,
+  const filteredFindings = useMemo(
+    () => (!filter ? findings : findings.filter((f) => f.severity === filter)),
+    [findings, filter]
+  );
 
-    MEDIUM:
-      findings.filter(
-        (f) =>
-          f.severity ===
-          "MEDIUM"
-      ).length,
+  const groupedFindings = useMemo(() => {
+    const grouped: Record<string, any[]> = {};
+    filteredFindings.forEach((f) => {
+      const cat = f.category || "OTHER";
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(f);
+    });
+    return grouped;
+  }, [filteredFindings]);
 
-    LOW:
-      findings.filter(
-        (f) =>
-          f.severity === "LOW"
-      ).length,
-  };
-
-  const filteredFindings =
-    useMemo(() => {
-      if (!filter)
-        return findings;
-
-      return findings.filter(
-        (f) =>
-          f.severity === filter
-      );
-    }, [findings, filter]);
-
-  const groupedFindings =
-    useMemo(() => {
-      const grouped: Record<
-        string,
-        any[]
-      > = {};
-
-      filteredFindings.forEach(
-        (f) => {
-          const category =
-            f.category ||
-            "OTHER";
-
-          if (
-            !grouped[category]
-          ) {
-            grouped[
-              category
-            ] = [];
-          }
-
-          grouped[
-            category
-          ].push(f);
-        }
-      );
-
-      return grouped;
-    }, [filteredFindings]);
-
-  const renderRow = (
-    label: string,
-    value: any
-  ) => {
-    if (
-      value === undefined ||
-      value === null ||
-      value === ""
-    ) {
-      return null;
-    }
-
-    return (
-      <div className="grid grid-cols-[220px_1fr] gap-4 py-2 border-b border-gray-100">
-
-        <p className="text-sm font-semibold text-gray-700">
-          {label}
-        </p>
-
-        <p className="text-sm text-gray-600 whitespace-pre-wrap break-words leading-relaxed">
-          {typeof value === "object"
-            ? JSON.stringify(
-                value,
-                null,
-                2
-              )
-            : String(value)}
-        </p>
-      </div>
-    );
-  };
+  const totalScore =
+    stats.CRITICAL * 40 + stats.HIGH * 20 + stats.MEDIUM * 10 + stats.LOW * 5;
+  const healthPct = Math.max(0, Math.round(100 - Math.min(totalScore / 4, 100)));
 
   return (
     <AppLayout>
-      <div className="p-6 bg-gray-50 min-h-screen">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+        .report-root { font-family: 'DM Sans', sans-serif; }
+        .report-root h1, .report-root h2, .report-root h3, .report-root h4 { font-family: 'Lora', serif; }
+        .report-root code, .report-root .mono { font-family: 'DM Mono', monospace; }
+        .finding-enter { animation: fadeUp 0.35s ease both; }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        .stat-btn { transition: box-shadow 0.15s, border-color 0.15s; }
+        .stat-btn:hover { box-shadow: 0 0 0 3px #E0E7FF; }
+        .stat-btn.active { box-shadow: 0 0 0 3px #6366F1; border-color: #6366F1; }
+        .bar-fill { transition: width 0.8s cubic-bezier(.4,0,.2,1); }
+      `}</style>
 
-        {/* HEADER */}
+      <div className="report-root min-h-screen bg-[#F8F8F6] py-10 px-4 md:px-8">
+        <div className="max-w-[860px] mx-auto">
 
-        <div className="mb-8">
-          <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
-            Vulnerability Assessment
-          </p>
+          {/* ── COVER ── */}
+          <div className="bg-white border border-[#E5E7EB]">
+            <div className="flex items-stretch">
+              {/* left accent strip */}
+              <div className="w-1.5 bg-[#1E1E2E] flex-shrink-0" />
+              <div className="flex-1 px-10 py-14">
+                <div className="flex items-center justify-between mb-12">
+                  <span className="text-[10px] tracking-[0.22em] uppercase text-[#9CA3AF] font-semibold">
+                    Confidential · For Authorized Recipients Only
+                  </span>
+                  <span className="text-[10px] tracking-[0.1em] text-[#9CA3AF] mono">
+                    {new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}
+                  </span>
+                </div>
 
-          <h1 className="text-3xl font-bold text-gray-900 mt-1">
-            Assessment Report
-          </h1>
+                <h1 className="text-[38px] font-bold leading-tight text-[#111827] max-w-lg">
+                  Vulnerability Assessment Report
+                </h1>
 
-          <p className="text-sm text-gray-400 mt-2">
-            Assessment ID:{" "}
-            {assessmentId}
-          </p>
-        </div>
+                <div className="mt-8 h-px bg-[#E5E7EB]" />
 
-        {loading ? (
-          <div className="h-48 flex items-center justify-center text-gray-400">
-            Loading findings...
+                <div className="mt-8 grid grid-cols-2 gap-x-10 gap-y-4 text-sm">
+                  <div>
+                    <SectionLabel>Client</SectionLabel>
+                    <p className="text-[#111827] font-medium">Client Organization</p>
+                  </div>
+                  <div>
+                    <SectionLabel>Assessment ID</SectionLabel>
+                    <p className="text-[#111827] font-medium mono text-xs">{assessmentId || "—"}</p>
+                  </div>
+                  <div>
+                    <SectionLabel>Prepared by</SectionLabel>
+                    <p className="text-[#111827] font-medium">ISCO Security</p>
+                  </div>
+                  <div>
+                    <SectionLabel>Classification</SectionLabel>
+                    <p className="text-[#111827] font-medium">Restricted</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        ) : (
-          <>
-            {/* SUMMARY */}
 
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
-
-              <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-                <p className="text-xs uppercase text-gray-400">
-                  Total Findings
-                </p>
-
-                <h2 className="text-4xl font-bold mt-2">
-                  {findings.length}
-                </h2>
-              </div>
-
-              {Object.entries(stats).map(
-                ([key, value]) => {
-                  const s =
-                    SEVERITY[key];
-
-                  return (
-                    <button
-                      key={key}
-                      onClick={() =>
-                        setFilter(
-                          filter === key
-                            ? null
-                            : key
-                        )
-                      }
-                      className={`bg-white border rounded-2xl p-5 text-left transition ${
-                        filter === key
-                          ? "ring-2 ring-indigo-200"
-                          : "border-gray-200"
-                      }`}
-                    >
-                      <p className="text-xs uppercase text-gray-400">
-                        {key}
-                      </p>
-
-                      <h2
-                        className={`text-4xl font-bold mt-2 ${s.text}`}
-                      >
-                        {value}
-                      </h2>
-                    </button>
-                  );
-                }
-              )}
-            </div>
-
-            {/* RISK RATING */}
-
-            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm mb-10">
-
-              <h2 className="text-xl font-semibold text-gray-900 mb-5">
-                Risk Rating
-              </h2>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-
-                  <thead>
-                    <tr className="border-b border-gray-100">
-                      <th className="text-left py-3 text-gray-500 font-semibold">
-                        Severity
-                      </th>
-
-                      <th className="text-left py-3 text-gray-500 font-semibold">
-                        CVSS Score
-                      </th>
-
-                      <th className="text-left py-3 text-gray-500 font-semibold">
-                        Recommendation
-                      </th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {[
-                      {
-                        label:
-                          "Critical",
-                        color:
-                          "text-red-600",
-                        score:
-                          "9.0 - 10.0",
-                        rec:
-                          "Immediate remediation required",
-                      },
-
-                      {
-                        label:
-                          "High",
-                        color:
-                          "text-orange-600",
-                        score:
-                          "7.0 - 8.9",
-                        rec:
-                          "Fix immediately",
-                      },
-
-                      {
-                        label:
-                          "Medium",
-                        color:
-                          "text-amber-600",
-                        score:
-                          "4.0 - 6.9",
-                        rec:
-                          "Prioritize remediation",
-                      },
-
-                      {
-                        label:
-                          "Low",
-                        color:
-                          "text-emerald-600",
-                        score:
-                          "0.1 - 3.9",
-                        rec:
-                          "Address during next update cycle",
-                      },
-                    ].map((r) => (
-                      <tr
-                        key={
-                          r.label
-                        }
-                        className="border-b border-gray-50"
-                      >
-                        <td
-                          className={`py-4 font-semibold ${r.color}`}
-                        >
-                          {r.label}
-                        </td>
-
-                        <td className="py-4">
-                          {r.score}
-                        </td>
-
-                        <td className="py-4 text-gray-600">
-                          {r.rec}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          {loading ? (
+            <div className="bg-white border border-[#E5E7EB] border-t-0 flex items-center justify-center h-60">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-6 h-6 border-2 border-[#6366F1] border-t-transparent rounded-full animate-spin" />
+                <p className="text-sm text-[#9CA3AF]">Loading report…</p>
               </div>
             </div>
+          ) : (
+            <>
+              {/* ── EXECUTIVE SUMMARY ── */}
+              <div className="bg-white border border-[#E5E7EB] border-t-0">
+                <div className="px-10 py-10">
+                  <SectionLabel>01 · Executive Summary</SectionLabel>
+                  <h2 className="text-2xl font-bold text-[#111827] mb-5">Overview</h2>
+                  <p className="text-[#4B5563] leading-7 text-[15px] max-w-2xl bg-[#F9FAFB] border border-[#E5E7EB] p-6 rounded">
+                    This report presents the findings of a vulnerability assessment conducted on the
+                    assessed infrastructure. All vulnerabilities are classified using CVSS v3.1 scoring
+                    and include remediation guidance and supporting evidence.
+                  </p>
 
-            {/* FINDINGS */}
-
-            <div className="space-y-10">
-
-              {Object.entries(
-                groupedFindings
-              ).map(
-                ([
-                  category,
-                  items,
-                ]) => (
-                  <div
-                    key={category}
-                  >
-
-                    {/* CATEGORY */}
-
-                    <div className="mb-5">
-
-                      <h2 className="text-2xl font-bold text-gray-900">
-                        {CATEGORY_TITLES[
-                          category
-                        ] ||
-                          `${category} Findings`}
-                      </h2>
-
-                      <p className="text-sm text-gray-400 mt-1">
-                        {
-                          items.length
-                        }{" "}
-                        finding
-                        {items.length !==
-                        1
-                          ? "s"
-                          : ""}
-                      </p>
+                  {/* Health score */}
+                  <div className="mt-8 flex items-center gap-6">
+                    <div className="relative w-20 h-20 flex-shrink-0">
+                      <svg viewBox="0 0 80 80" className="w-full h-full -rotate-90">
+                        <circle cx="40" cy="40" r="34" fill="none" stroke="#F3F4F6" strokeWidth="8" />
+                        <circle
+                          cx="40" cy="40" r="34" fill="none"
+                          stroke={healthPct >= 70 ? "#059669" : healthPct >= 40 ? "#D97706" : "#DC2626"}
+                          strokeWidth="8"
+                          strokeDasharray={`${(healthPct / 100) * 213.6} 213.6`}
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      <span className="absolute inset-0 flex items-center justify-center text-base font-bold text-[#111827]" style={{ rotate: "0deg" }}>
+                        {healthPct}
+                      </span>
                     </div>
-
-                    {/* FINDING CARDS */}
-
-                    <div className="space-y-6">
-
-                      {items.map(
-                        (f) => {
-                          const s =
-                            SEVERITY[
-                              f
-                                .severity
-                            ] ||
-                            SEVERITY.LOW;
-
-                          let dynamicFields =
-                            {};
-
-                          try {
-                            dynamicFields =
-                              typeof (
-                                f.dynamicFields ||
-                                f.dynamic_fields
-                              ) ===
-                              "string"
-                                ? JSON.parse(
-                                    f.dynamicFields ||
-                                      f.dynamic_fields
-                                  )
-                                : (
-                                    f.dynamicFields ||
-                                    f.dynamic_fields ||
-                                    {}
-                                  );
-                          } catch {
-                            dynamicFields =
-                              {};
-                          }
-
-                          return (
-                            <div
-                              key={
-                                f.id
-                              }
-                              className={`bg-white border-l-4 ${s.border} rounded-2xl shadow-sm p-7`}
-                            >
-
-                              {/* TOP */}
-
-                              <div className="flex items-start justify-between gap-4 mb-6">
-
-                                <div>
-
-                                  <h3 className="text-2xl font-semibold text-gray-900">
-                                    {
-                                      f.title
-                                    }
-                                  </h3>
-
-                                  <div className="flex flex-wrap gap-2 mt-3">
-
-                                    <span
-                                      className={`px-3 py-1 rounded-full text-xs font-semibold ${s.badge}`}
-                                    >
-                                      {
-                                        f.severity
-                                      }
-                                    </span>
-
-                                    {f.category && (
-                                      <span className="px-3 py-1 rounded-full text-xs bg-gray-100 text-gray-600">
-                                        {
-                                          f.category
-                                        }
-                                      </span>
-                                    )}
-
-                                    {f.toolName && (
-                                      <span className="px-3 py-1 rounded-full text-xs bg-gray-100 text-gray-600">
-                                        {
-                                          f.toolName
-                                        }
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {f.cvssScore && (
-                                  <div className={`border rounded-2xl px-5 py-3 text-center ${s.bg}`}>
-
-                                    <p className="text-[10px] uppercase text-gray-400">
-                                      CVSS
-                                    </p>
-
-                                    <p className={`text-3xl font-bold ${s.text}`}>
-                                      {Number(
-                                        f.cvssScore
-                                      ).toFixed(
-                                        1
-                                      )}
-                                    </p>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* CONTENT */}
-
-                              <div className="space-y-1">
-
-                                {renderRow(
-                                  "Description",
-                                  f.description
-                                )}
-
-                                {renderRow(
-                                  "Impact",
-                                  f.impact
-                                )}
-
-                                {renderRow(
-                                  "Recommendation",
-                                  f.recommendation
-                                )}
-
-                                {renderRow(
-                                  "Evidence",
-                                  f.evidence
-                                )}
-
-                                {renderRow(
-                                  "Affected Systems",
-                                  f.affectedSystems
-                                )}
-
-                                {renderRow(
-                                  "Affected URLs",
-                                  f.affectedUrls
-                                )}
-
-                                {/* DYNAMIC FIELDS */}
-
-                                {Object.entries(
-                                  dynamicFields
-                                ).map(
-                                  ([
-                                    key,
-                                    value,
-                                  ]) =>
-                                    renderRow(
-                                      key
-                                        .replace(
-                                          /[-_]/g,
-                                          " "
-                                        )
-                                        .replace(
-                                          /\b\w/g,
-                                          (
-                                            c
-                                          ) =>
-                                            c.toUpperCase()
-                                        ),
-
-                                      value
-                                    )
-                                )}
-                              </div>
-
-                              {/* FOOTER */}
-
-                              <div className="flex flex-wrap justify-between items-center gap-3 mt-6 pt-4 border-t border-gray-100 text-xs text-gray-400">
-
-                                <div className="flex flex-wrap gap-3">
-
-                                  {f.cvssVector && (
-                                    <span className="font-mono bg-gray-100 border border-gray-200 rounded px-2 py-1">
-                                      {
-                                        f.cvssVector
-                                      }
-                                    </span>
-                                  )}
-                                </div>
-
-                                {f.createdAt && (
-                                  <span>
-                                    Created{" "}
-                                    {new Date(
-                                      f.createdAt
-                                    ).toLocaleDateString()}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        }
-                      )}
+                    <div>
+                      <p className="text-sm font-semibold text-[#111827]">Security Health Score</p>
+                      <p className="text-xs text-[#6B7280] mt-1">Weighted by severity — higher is better</p>
                     </div>
                   </div>
-                )
-              )}
-            </div>
-          </>
-        )}
+
+                  {/* Severity stat cards */}
+                  <div className="mt-8 grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div className="border border-[#E5E7EB] p-5">
+                      <SectionLabel>Total</SectionLabel>
+                      <p className="text-3xl font-bold text-[#111827]">{findings.length}</p>
+                      <p className="text-xs text-[#9CA3AF] mt-1">findings</p>
+                    </div>
+                    {(["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const).map((key) => {
+                      const s = SEVERITY[key];
+                      const count = stats[key];
+                      const pct = findings.length ? Math.round((count / findings.length) * 100) : 0;
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => setFilter(filter === key ? null : key)}
+                          className={`stat-btn border border-[#E5E7EB] p-5 text-left ${filter === key ? "active" : ""}`}
+                        >
+                          <div className={`w-2 h-2 rounded-full ${s.dot} mb-3`} />
+                          <p className="text-[10px] font-semibold tracking-[0.15em] uppercase text-[#9CA3AF]">{s.label}</p>
+                          <p className={`text-3xl font-bold mt-1 ${s.text}`}>{count}</p>
+                          <div className="mt-3 h-1 bg-[#F3F4F6] rounded-full overflow-hidden">
+                            <div
+                              className={`bar-fill h-full rounded-full ${s.dot}`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {filter && (
+                    <div className="mt-4 flex items-center gap-2">
+                      <span className="text-xs text-[#6B7280]">Filtered by severity:</span>
+                      <span className={`text-xs px-2 py-0.5 rounded ${SEVERITY[filter].badge}`}>{SEVERITY[filter].label}</span>
+                      <button onClick={() => setFilter(null)} className="text-xs text-indigo-600 hover:underline ml-1">Clear filter</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ── RISK RATING ── */}
+              <div className="bg-white border border-[#E5E7EB] border-t-0">
+                <div className="px-10 py-10">
+                  <SectionLabel>02 · Risk Classification</SectionLabel>
+                  <h2 className="text-2xl font-bold text-[#111827] mb-6">Risk Rating Matrix</h2>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-[#E5E7EB]">
+                        <th className="text-left py-3 pr-6 text-[10px] tracking-[0.15em] uppercase text-[#9CA3AF] font-semibold w-28">Severity</th>
+                        <th className="text-left py-3 pr-6 text-[10px] tracking-[0.15em] uppercase text-[#9CA3AF] font-semibold w-32">CVSS Range</th>
+                        <th className="text-left py-3 text-[10px] tracking-[0.15em] uppercase text-[#9CA3AF] font-semibold">Recommended Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { key: "CRITICAL", range: "9.0 – 10.0", action: "Emergency remediation — address within 24 hours" },
+                        { key: "HIGH", range: "7.0 – 8.9", action: "Immediate action — address within 7 days" },
+                        { key: "MEDIUM", range: "4.0 – 6.9", action: "Prioritize remediation in next release cycle" },
+                        { key: "LOW", range: "0.1 – 3.9", action: "Address during scheduled maintenance window" },
+                      ].map(({ key, range, action }) => {
+                        const s = SEVERITY[key];
+                        return (
+                          <tr key={key} className="border-b border-[#F3F4F6]">
+                            <td className="py-4 pr-6">
+                              <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded ${s.badge}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                                {s.label}
+                              </span>
+                            </td>
+                            <td className="py-4 pr-6 text-[#374151] mono text-xs">{range}</td>
+                            <td className="py-4 text-[#4B5563]">{action}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* ── FINDINGS ── */}
+              <div className="bg-white border border-[#E5E7EB] border-t-0">
+                <div className="px-10 py-10">
+                  <SectionLabel>03 · Technical Findings</SectionLabel>
+                  <h2 className="text-2xl font-bold text-[#111827] mb-2">Detailed Findings &amp; Recommendations</h2>
+                  <p className="text-sm text-[#6B7280] mb-10">
+                    {filteredFindings.length} finding{filteredFindings.length !== 1 ? "s" : ""} displayed
+                    {filter ? ` · ${SEVERITY[filter].label} severity` : ""}
+                  </p>
+
+                  <div className="space-y-0">
+                    {Object.entries(groupedFindings).map(([category, items], catIdx) => (
+                      <div key={category} className={catIdx > 0 ? "mt-14" : ""}>
+                        {/* Category header */}
+                        <div className="flex items-center gap-4 mb-8">
+                          <div className="h-px flex-1 bg-[#E5E7EB]" />
+                          <span className="text-[10px] font-semibold tracking-[0.2em] uppercase text-[#6B7280] whitespace-nowrap">
+                            {CATEGORY_TITLES[category] || category} · {items.length} {items.length === 1 ? "finding" : "findings"}
+                          </span>
+                          <div className="h-px flex-1 bg-[#E5E7EB]" />
+                        </div>
+
+                        <div className="space-y-10">
+                          {items.map((f, idx) => {
+                            const s = SEVERITY[f.severity] || SEVERITY.LOW;
+
+                            let dynamicFields: Record<string, any> = {};
+                            try {
+                              const raw = f.dynamicFields || f.dynamic_fields;
+                              dynamicFields = typeof raw === "string" ? JSON.parse(raw) : (raw || {});
+                            } catch { dynamicFields = {}; }
+
+                            const fileFields = Object.entries(dynamicFields).filter(([key, value]) =>
+                              key.toLowerCase() !== "value" &&
+                              typeof value === "string" &&
+                              /\.(png|jpe?g|pdf)$/i.test(value)
+                            );
+
+                            return (
+                              <div
+                                key={f.id}
+                                className={`finding-enter border-l-4 ${s.border} bg-white`}
+                                style={{ animationDelay: `${idx * 60}ms` }}
+                              >
+                                <div className="pl-6 pr-0">
+                                  {/* Finding header */}
+                                  <div className="flex items-start justify-between gap-6">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex flex-wrap items-center gap-2 mb-3">
+                                        <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded ${s.badge}`}>
+                                          <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                                          {s.label}
+                                        </span>
+                                        {f.category && (
+                                          <span className="text-[11px] px-2.5 py-1 bg-[#F9FAFB] border border-[#E5E7EB] text-[#6B7280] rounded">
+                                            {f.category}
+                                          </span>
+                                        )}
+                                        {f.status && (
+                                          <span className="text-[11px] px-2.5 py-1 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded">
+                                            {f.status}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <h4 className="text-[19px] font-bold text-[#111827] leading-snug">{f.title}</h4>
+                                    </div>
+
+                                    {f.cvssScore && (
+                                      <div className={`flex-shrink-0 ${s.soft} border border-[#E5E7EB] px-5 py-4 text-center min-w-[80px]`}>
+                                        <p className="text-[9px] tracking-[0.15em] uppercase text-[#9CA3AF] font-semibold mb-1">CVSS</p>
+                                        <p className={`text-3xl font-bold ${s.text}`}>{Number(f.cvssScore).toFixed(1)}</p>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <div className="mt-6 space-y-6">
+                                    {f.description && (
+                                      <div>
+                                        <SectionLabel>Description</SectionLabel>
+                                        <p className="text-[#374151] leading-7 text-[14px]">{f.description}</p>
+                                      </div>
+                                    )}
+
+                                    {f.impact && (
+                                      <div>
+                                        <SectionLabel>Impact</SectionLabel>
+                                        <p className="text-[#374151] leading-7 text-[14px]">{f.impact}</p>
+                                      </div>
+                                    )}
+
+                                    {f.recommendation && (
+                                      <div>
+                                        <SectionLabel>Recommendation</SectionLabel>
+                                        <div className="border-l-2 border-indigo-300 pl-4 bg-indigo-50/40 py-3 pr-4 rounded-r">
+                                          <p className="text-[#374151] leading-7 text-[14px]">{f.recommendation}</p>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {f.evidence && (
+                                      <div>
+                                        <SectionLabel>Evidence</SectionLabel>
+                                        <pre className="mono text-[12px] bg-[#F9FAFB] border border-[#E5E7EB] p-4 whitespace-pre-wrap text-[#374151] leading-6 overflow-x-auto">
+                                          {f.evidence}
+                                        </pre>
+                                      </div>
+                                    )}
+
+                                    {f.affectedSystems && (
+                                      <div>
+                                        <SectionLabel>Affected Systems</SectionLabel>
+                                        <div className="flex flex-wrap gap-2">
+                                          {String(f.affectedSystems).split(",").map((s: string) => (
+                                            <span key={s} className="mono text-[11px] px-3 py-1 bg-[#F3F4F6] border border-[#E5E7EB] text-[#374151] rounded">
+                                              {s.trim()}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {(f.attachment || fileFields.length > 0) && (
+                                      <div>
+                                        <SectionLabel>Attachments</SectionLabel>
+                                        <div className="space-y-2">
+                                          {f.attachment && (
+                                            <a
+                                              href={`${API_BASE}/uploads/${f.attachment}`}
+                                              target="_blank"
+                                              rel="noreferrer"
+                                              className="flex items-center justify-between border border-[#E5E7EB] px-4 py-3 hover:bg-[#F9FAFB] transition group rounded"
+                                            >
+                                              <div>
+                                                <p className="text-sm font-medium text-[#111827]">Primary Attachment</p>
+                                                <p className="text-xs text-[#9CA3AF] mt-0.5">Click to view evidence file</p>
+                                              </div>
+                                              <span className="text-xs px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-100 group-hover:bg-indigo-100 transition rounded">
+                                                Open ↗
+                                              </span>
+                                            </a>
+                                          )}
+                                          {fileFields.map(([key, value]) => {
+                                            const label = key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+                                            return (
+                                              <a
+                                                key={key}
+                                                href={`${API_BASE}/uploads/${value}`}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="flex items-center justify-between border border-[#E5E7EB] px-4 py-3 hover:bg-[#F9FAFB] transition group rounded"
+                                              >
+                                                <div>
+                                                  <p className="text-sm font-medium text-[#111827]">{label}</p>
+                                                  <p className="text-xs text-[#9CA3AF] mt-0.5">Click to view evidence file</p>
+                                                </div>
+                                                <span className="text-xs px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-100 group-hover:bg-indigo-100 transition rounded">
+                                                  Open ↗
+                                                </span>
+                                              </a>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {f.cvssVector && (
+                                      <div>
+                                        <SectionLabel>CVSS v3.1 Vector</SectionLabel>
+                                        <table className="w-full text-sm border border-[#E5E7EB]">
+                                          <tbody>
+                                            <tr className="border-b border-[#F3F4F6]">
+                                              <td className="p-3 text-[#6B7280] w-32 text-xs">Base Score</td>
+                                              <td className={`p-3 font-semibold mono text-xs ${s.text}`}>{f.cvssScore}</td>
+                                            </tr>
+                                            <tr>
+                                              <td className="p-3 text-[#6B7280] w-32 text-xs">Vector</td>
+                                              <td className="p-3 mono text-[11px] text-[#374151] break-all">{f.cvssVector}</td>
+                                            </tr>
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Finding footer */}
+                                  <div className="mt-6 pt-4 border-t border-[#F3F4F6] flex justify-between text-[11px] text-[#9CA3AF]">
+                                    <span className="mono">{f.cvssVector || ""}</span>
+                                    <div className="flex gap-4">
+                                      {f.createdAt && <span>Created {new Date(f.createdAt).toLocaleDateString()}</span>}
+                                      {f.updatedAt && <span>Updated {new Date(f.updatedAt).toLocaleDateString()}</span>}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* bottom separator */}
+                                {idx < items.length - 1 && <div className="mt-10 border-b border-[#F3F4F6]" />}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+
+                    {filteredFindings.length === 0 && (
+                      <div className="text-center py-20 text-[#9CA3AF]">
+                        <p className="text-4xl mb-3">—</p>
+                        <p className="text-sm">No findings match the current filter.</p>
+                        {filter && (
+                          <button onClick={() => setFilter(null)} className="mt-3 text-xs text-indigo-600 hover:underline">
+                            Clear filter
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* ── FOOTER ── */}
+              <div className="bg-white border border-[#E5E7EB] border-t-0">
+                <div className="px-10 py-8 flex items-center justify-between">
+                  <p className="text-xs text-[#9CA3AF]">ISCO Technologies · Vulnerability Assessment Report</p>
+                  <p className="text-xs text-[#9CA3AF] mono">
+                    {new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}
+                  </p>
+                </div>
+              </div>
+
+            </>
+          )}
+        </div>
       </div>
     </AppLayout>
   );

@@ -2,8 +2,9 @@
 
 import { NavLink, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import {Building2,ClipboardList,LogOut,LayoutDashboard,ListTodo,FileDown,LucideClipboardClock,User2Icon,ShieldAlert,} from "lucide-react";
+import {Building2,ClipboardList,LogOut,LayoutDashboard,ListTodo,FileDown,LucideClipboardClock,User2Icon,ShieldAlert,ArchiveIcon} from "lucide-react";
 import { useAuthStore } from "../feature/store/authStore";
+
 
 const navStyle = ({ isActive }: any) =>
   `flex items-center gap-3 rounded-md px-3 py-2 text-sm ${
@@ -58,6 +59,10 @@ const Sidebar = () => {
 
             <NavLink to="/admin/users" className={navStyle}>
               <User2Icon /> Users
+            </NavLink>
+
+            <NavLink to="/admin/Archives" className={navStyle}>
+              <ArchiveIcon /> Archives
             </NavLink>
 
             <NavLink to="/admin/reports/" className={navStyle}>

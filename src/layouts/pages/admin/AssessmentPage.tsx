@@ -5,7 +5,6 @@ import {Clipboard,ShieldAlert,AlertTriangle,CheckCircle2,Plus,} from "lucide-rea
 import AppLayout from "../../appLayout";
 import { useAppDispatch } from "../../../feature/hooks/useAppDispatch";
 import { useAppSelector } from "../../../feature/hooks/useAppSelector";
-
 import {fetchAssessments,createAssessment,} from "../../../feature/assessments/assessmentSlice";
 import { fetchCompanies } from "../../../feature/company/companySlice";
 import { fetchChecklists } from "../../../feature/checklists/checklistSlice";
@@ -218,44 +217,27 @@ const critical =
     {
       key: "PENDING",
       label: "Pending",
-      count:
-        assessments.filter(
-          (a: any) =>
-            a.status ===
-            "PENDING"
+      count: assessments.filter(
+          (a: any) => a.status ==="PENDING"
         ).length,
     },
 
     {
-      key: "IN PROGRESS",
+      key: "IN_PROGRESS",
       label: "In Progress",
       count:
         assessments.filter(
           (a: any) =>
-            a.status ===
-            "IN PROGRESS"
+            a.status?.replace(" ", "_") ===
+            "IN_PROGRESS"
         ).length,
     },
 
     {
       key: "COMPLETED",
       label: "Completed",
-      count:
-        assessments.filter(
-          (a: any) =>
-            a.status ===
-            "COMPLETED"
-        ).length,
-    },
-
-    {
-      key: "REPORTING",
-      label: "Reporting",
-      count:
-        assessments.filter(
-          (a: any) =>
-            a.status ===
-            "REPORTING"
+      count: assessments.filter(
+          (a: any) =>a.status ==="COMPLETED"
         ).length,
     },
   ];
@@ -264,13 +246,14 @@ const critical =
     status: string
   ) => {
     switch (status) {
+
+      case "PENDING":
+        return "bg-gray-100 text-gray-700";
+
       case "COMPLETED":
         return "bg-green-100 text-green-700";
 
-      case "REPORTING":
-        return "bg-indigo-100 text-indigo-700";
-
-      case "IN PROGRESS":
+      case "IN_PROGRESS":
         return "bg-yellow-100 text-yellow-700";
 
       default:
@@ -561,7 +544,7 @@ const critical =
                             a.status
                           )}`}
                         >
-                          {a.status}
+                          {a.status?.replaceAll("_", " ")}
                         </span>
                       </td>
                     </tr>

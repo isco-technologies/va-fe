@@ -382,7 +382,6 @@ export default function AdminAssessmentReviewPage() {
   };
 
   // SUBMIT
-
   const handleSubmit = async (
     e: React.FormEvent
   ) => {
@@ -922,15 +921,9 @@ export default function AdminAssessmentReviewPage() {
 
                             {/* TEXT */}
 
-                            {field.type ===
-                              "text" && (
-                                <input
-                                  value={
-                                    values[
-                                    field
-                                      .id
-                                    ] ||
-                                    ""
+                            {field.type ==="text" && (
+                                <input value={
+                                    values[field.id] || ""
                                   }
                                   required={
                                     field.required
@@ -1269,8 +1262,7 @@ export default function AdminAssessmentReviewPage() {
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
 
               <h3 className="font-semibold text-gray-900 text-sm">
-                Custom
-                Field
+                Custom Field
               </h3>
 
               <button
@@ -1366,8 +1358,13 @@ export default function AdminAssessmentReviewPage() {
                   </option>
 
                   <option value="number">
-                    Number
-                  </option>
+                    Numbers
+                    </option>
+                    
+                    <option value="file">
+                      Attachment
+                    </option>
+                  
                 </select>
               </div>
             </div>

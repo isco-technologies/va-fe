@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Lock, Eye, EyeOff } from "lucide-react";
@@ -45,7 +46,7 @@ export default function SetPasswordPage() {
         password,
       });
 
-      navigate("/login");
+      navigate("/consent");
     } catch (err: any) {
       setError(
         err?.response?.data?.message ||
@@ -73,7 +74,6 @@ export default function SetPasswordPage() {
             Create your new password
           </p>
         </div>
-
         {/* Error */}
         {error && (
           <div className="mt-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">

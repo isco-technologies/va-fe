@@ -12,9 +12,13 @@ import SetPasswordPage from "../layouts/pages/client/SetPasswordPage";
 import LandingPage from "../layouts/pages/admin/LandingPage";
 import AdminAssessmentReviewPage from "../layouts/pages/admin/AdminAssessmentReview"; 
 import AdminReportPage from "../layouts/pages/admin/AdminReportPage";
-import CompanyReportsPage from "../layouts/pages/admin/CompanyReportPage";
 import AssessmentReportPage from "../layouts/pages/admin/AssessmentReportPage";
 import AdminDashboard from "../layouts/pages/admin/AdminDashboardPage";
+import ClientReportsPage from "../layouts/pages/client/ClientReportPage";
+import ReportListPage from "../layouts/pages/admin/ReportfListPage";
+import ClientReportViewPage from "../layouts/pages/client/ClientReportViewPage";
+import ClientPolicyPage from "../layouts/pages/client/ClientPolicyPage";
+import ClientDashboard from "../layouts/pages/client/ClientDashboard";
 
 // AUTH HELPER
 const getAuth = () => {
@@ -43,49 +47,44 @@ const router = createBrowserRouter([
     ),
     children: [
       // 
-      { index: true, element: <Navigate to="assessment" replace /> },
+      { index: true, element: <Navigate to="dashboard" replace /> },
 
       { path: "assessment", element: <AssessmentPage /> },
       { path: "companies", element: <CompanyPage /> },
       { path: "checklists", element: <ChecklistPage /> },
       { path: "reports", element: <AdminReportPage /> },
-      { path: "reports/assessment/:assessmentId", element: <AssessmentReportPage /> },
-      { path: "reports/company/:companyId", element: <CompanyReportsPage /> },
-      {path: "dashboard", element: <AdminDashboard />}, // Temporary dashboard route
       
-
-
+      { path: "reports/edit/:assessmentId", element: <ReportListPage /> },
+      { path: "reports/view/:findingId", element: <AssessmentReportPage /> },
+      {path: "dashboard", element: <AdminDashboard />}, 
       
-
       // DETAILS
       {
         path: "checklists/:checklistId/domains",
         element: <ChecklistDomainPage />,
       },
-
       {
         path: "assessments/:assessmentId/review",
         element: <AdminAssessmentReviewPage />,
       },
-
       { path: "users", element: <UsersPage /> },
     ],
   },
 
   // CLIENT 
   {
-    path: "/client",
-    element: (
-      <ProtectedRoute
-        {...getAuth()}
+    path: "/client",element: (<ProtectedRoute{...getAuth()}
         allowedRoles={["CLIENT"]}
       />
     ),
     children: [
       
       { index: true, element: <Navigate to="assessment" replace /> },
-
       { path: "assessment", element: <ClientAssessmentPage /> },
+      { path: "reports", element: <ClientReportsPage /> },
+      { path: "reports/:findingId", element: <ClientReportViewPage /> },
+      { path: "consent", element: <ClientPolicyPage /> },
+      { path: "dashboard", element: <ClientDashboard /> },
     ],
   },
 
@@ -98,8 +97,8 @@ const router = createBrowserRouter([
       if (!isAuthenticated) return <Navigate to="/login" replace />;
 
       return role === "CLIENT"
-        ? <Navigate to="/client/assessment" replace />
-        : <Navigate to="/admin/assessment" replace />;
+        ? <Navigate to="/client/dashboard" replace />
+        : <Navigate to="/admin/dashboard" replace />;
     })(),
   },
 ]);

@@ -8,7 +8,7 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { login, user } = useAuthStore();
+  const { login, } = useAuthStore();
 
   const [credentials, setCredentials] = useState({
     email: "",
@@ -52,10 +52,15 @@ const Login = () => {
 
         //  2. Otherwise → role-based redirect
         if (user?.role === "CLIENT") {
+         const hasConsented = localStorage.getItem(`consented_${user.id}`);
+           if (!hasConsented) {
+          navigate("/client/consent", { replace: true });
+          } else {
           navigate(ROUTES.CLIENT_DASHBOARD, { replace: true });
-        } else {
-          navigate(ROUTES.ADMIN_DASHBOARD, { replace: true });
-        }
+              }
+            } else {
+           navigate(ROUTES.ADMIN_DASHBOARD, { replace: true });
+          }
       } else {
         setError("Invalid email or password");
       }

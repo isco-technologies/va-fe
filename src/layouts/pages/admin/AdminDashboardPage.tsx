@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import AppLayout from "../../appLayout";
 import apiClient from "../../../api/Axios";
@@ -51,12 +50,6 @@ type DashboardResponse = {
 
 // CONSTANTS
 
-const SEVERITY_STYLES: Record<string, string> = {
-  critical: "bg-red-50 text-red-700 border border-red-200",
-  high:     "bg-orange-50 text-orange-700 border border-orange-200",
-  medium:   "bg-yellow-50 text-yellow-700 border border-yellow-200",
-  low:      "bg-green-50 text-green-700 border border-green-200",
-};
 
 const STATUS_STYLES: Record<string, string> = {
   pending:     "bg-yellow-50 text-yellow-700 border border-yellow-200",
@@ -83,15 +76,51 @@ const TOOLTIP_STYLE = {
 
 //  BADGES 
 
-function SeverityBadge({ severity }: { severity: string }) {
-  const key = severity.toLowerCase();
+function SeverityBadge({
+  severity,
+}: {
+  severity?: string | null;
+}) {
+
+  if (!severity) {
+    return (
+      <span className="px-2 py-1 rounded-full text-xs border bg-gray-100 text-gray-400 border-gray-200">
+        —
+      </span>
+    );
+  }
+
+  const normalized =
+    severity.toUpperCase();
+
+  const styles: Record<
+    string,
+    string
+  > = {
+    CRITICAL:
+      "bg-red-100 text-red-700 border-red-200",
+
+    HIGH:
+      "bg-orange-100 text-orange-700 border-orange-200",
+
+    MEDIUM:
+      "bg-amber-100 text-amber-700 border-amber-200",
+
+    LOW:
+      "bg-emerald-100 text-emerald-700 border-emerald-200",
+  };
+
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${SEVERITY_STYLES[key] ?? "bg-gray-100 text-gray-600"}`}>
-      {severity}
+    <span
+      className={`px-2 py-1 rounded-full text-xs border font-medium ${
+        styles[normalized] ||
+        "bg-gray-100 text-gray-500 border-gray-200"
+      }`}
+    >
+      {normalized}
     </span>
   );
 }
-
 function StatusBadge({ status }: { status: string }) {
   const key = status.toLowerCase().replace(/ /g, "_");
   const label = status.replace(/_/g, " ");

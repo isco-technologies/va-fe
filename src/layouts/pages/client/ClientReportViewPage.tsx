@@ -1,84 +1,41 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import AppLayout from "../../appLayout";
 import apiClient from "../../../api/Axios";
-
+import { Download } from "lucide-react";
 
 const API_BASE = "http://localhost:4000";
 
-const SEVERITY: Record<string, { label: string; text: string; badge: string; border: string; soft: string; dot: string }> = {
-  CRITICAL: {
-    label: "Critical",
-    text: "text-[#B91C1C]",
-    badge: "bg-[#FEF2F2] text-[#B91C1C] border border-[#FECACA]",
-    border: "border-l-[#B91C1C]",
-    soft: "bg-[#FEF2F2]",
-    dot: "bg-[#B91C1C]",
-  },
-  HIGH: {
-    label: "High",
-    text: "text-[#C2410C]",
-    badge: "bg-[#FFF7ED] text-[#C2410C] border border-[#FED7AA]",
-    border: "border-l-[#C2410C]",
-    soft: "bg-[#FFF7ED]",
-    dot: "bg-[#C2410C]",
-  },
-  MEDIUM: {
-    label: "Medium",
-    text: "text-[#B45309]",
-    badge: "bg-[#FFFBEB] text-[#B45309] border border-[#FDE68A]",
-    border: "border-l-[#B45309]",
-    soft: "bg-[#FFFBEB]",
-    dot: "bg-[#B45309]",
-  },
-  LOW: {
-    label: "Low",
-    text: "text-[#065F46]",
-    badge: "bg-[#ECFDF5] text-[#065F46] border border-[#A7F3D0]",
-    border: "border-l-[#065F46]",
-    soft: "bg-[#ECFDF5]",
-    dot: "bg-[#065F46]",
-  },
+const SEVERITY: Record<string, { label: string; text: string; badge: string; soft: string; dot: string }> = {
+  CRITICAL: { label: "Critical", text: "text-[#B91C1C]", badge: "bg-[#FEF2F2] text-[#B91C1C] border border-[#FECACA]", soft: "bg-[#FEF2F2]", dot: "bg-[#B91C1C]" },
+  HIGH:     { label: "High",     text: "text-[#C2410C]", badge: "bg-[#FFF7ED] text-[#C2410C] border border-[#FED7AA]", soft: "bg-[#FFF7ED]", dot: "bg-[#C2410C]" },
+  MEDIUM:   { label: "Medium",   text: "text-[#B45309]", badge: "bg-[#FFFBEB] text-[#B45309] border border-[#FDE68A]", soft: "bg-[#FFFBEB]", dot: "bg-[#B45309]" },
+  LOW:      { label: "Low",      text: "text-[#065F46]", badge: "bg-[#ECFDF5] text-[#065F46] border border-[#A7F3D0]", soft: "bg-[#ECFDF5]", dot: "bg-[#065F46]" },
 };
 
 const CATEGORY_TITLES: Record<string, string> = {
-  NETWORK: "Network",
-  NETWORK_SECURITY: "Network Security",
-  WEB_APPLICATION: "Web Application",
-  CLOUD_SECURITY: "Cloud Security",
-  INFRASTRUCTURE: "Infrastructure",
-  ACCESS_CONTROL: "Access Control",
-  DATA_PROTECTION: "Data Protection",
-  GOVERNANCE: "Governance",
-  ENDPOINT_SECURITY: "Endpoint Security",
+  NETWORK: "Network", NETWORK_SECURITY: "Network Security", WEB_APPLICATION: "Web Application",
+  CLOUD_SECURITY: "Cloud Security", INFRASTRUCTURE: "Infrastructure", ACCESS_CONTROL: "Access Control",
+  DATA_PROTECTION: "Data Protection", GOVERNANCE: "Governance", ENDPOINT_SECURITY: "Endpoint Security",
 };
 
-// Ordered dynamic field entry (new format)
-type DynEntry = {
-  label: string;
-  value: string | null;
-  type: string;
-  subtopic: string | null;
-};
+type DynEntry = { label: string; value: string | null; type: string; subtopic: string | null };
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-[10px] font-semibold tracking-[0.18em] uppercase text-[#9CA3AF] mb-3">
-      {children}
-    </p>
-  );
+  return <p className="text-[10px] font-semibold tracking-[0.18em] uppercase text-[#9CA3AF] mb-3">{children}</p>;
 }
 
-export default function AssessmentReportPage() {
+export default function ClientReportViewPage() {
   const { findingId } = useParams();
+  const reportRef = useRef<HTMLDivElement>(null);
   const [findings, setFindings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string | null>(null);
-  const [, setAssessmentId] = useState<string | null>(null);
-  const [sending, setSending] = useState(false);
-  const [reportSent, setReportSent] = useState(false);
+  const [companyName, setCompanyName] = useState<string | null>(null);
+  const [assessmentName, setAssessmentName] = useState<string | null>(null);
   const [reportSentAt, setReportSentAt] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
   if (!findingId) return;
@@ -87,36 +44,43 @@ export default function AssessmentReportPage() {
     .then((res) => {
       const finding = res.data?.data;
       if (!finding) { setFindings([]); return; }
-      setFindings([finding]);
-      setAssessmentId(finding.assessment?.id || null);
-      setReportSent(finding.reportSent || false);
+      setFindings([finding]);                                    // ← wrap in array
+      setCompanyName(finding.assessment?.company?.name || null);
+      setAssessmentName(finding.assessment?.name || null);
       setReportSentAt(finding.reportSentAt || null);
     })
     .catch((err) => { console.error(err); setFindings([]); })
     .finally(() => setLoading(false));
 }, [findingId]);
 
-  const handleSendReport = async () => {
-    if (!findingId) return;
+  const handleDownloadPDF = async () => {
+    if (!reportRef.current) return;
+    setDownloading(true);
     try {
-      setSending(true);
-      await apiClient.post(`/reports/send/${findingId}`);
-      setReportSent(true);
-      setReportSentAt(new Date().toISOString());
-      alert("Report released successfully");
-    } catch (error) {
-      console.error(error);
-      alert("Failed to release report");
+      const html2pdf = (await import("html2pdf.js")).default;
+      html2pdf()
+        .set({
+          margin: 0,
+          filename: `${assessmentName || "report"}.pdf`,
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        })
+        .from(reportRef.current)
+        .save();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to generate PDF");
     } finally {
-      setSending(false);
+      setDownloading(false);
     }
   };
 
   const stats = useMemo(() => ({
     CRITICAL: findings.filter((f) => f.severity === "CRITICAL").length,
-    HIGH: findings.filter((f) => f.severity === "HIGH").length,
-    MEDIUM: findings.filter((f) => f.severity === "MEDIUM").length,
-    LOW: findings.filter((f) => f.severity === "LOW").length,
+    HIGH:     findings.filter((f) => f.severity === "HIGH").length,
+    MEDIUM:   findings.filter((f) => f.severity === "MEDIUM").length,
+    LOW:      findings.filter((f) => f.severity === "LOW").length,
   }), [findings]);
 
   const filteredFindings = useMemo(
@@ -134,8 +98,7 @@ export default function AssessmentReportPage() {
     return grouped;
   }, [filteredFindings]);
 
-  const totalScore =
-    stats.CRITICAL * 40 + stats.HIGH * 20 + stats.MEDIUM * 10 + stats.LOW * 5;
+  const totalScore = stats.CRITICAL * 40 + stats.HIGH * 20 + stats.MEDIUM * 10 + stats.LOW * 5;
   const healthPct = Math.max(0, Math.round(100 - Math.min(totalScore / 4, 100)));
 
   return (
@@ -153,10 +116,22 @@ export default function AssessmentReportPage() {
         .bar-fill { transition: width 0.8s cubic-bezier(.4,0,.2,1); }
       `}</style>
 
-      <div className="report-root min-h-screen bg-[#F8F8F6] py-10 px-4 md:px-8">
-        <div className="max-w-[860px] mx-auto">
+      {/* PDF DOWNLOAD BUTTON */}
+      <div className="max-w-[860px] mx-auto mb-4 flex justify-end">
+        <button
+          onClick={handleDownloadPDF}
+          disabled={downloading}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition disabled:opacity-50"
+        >
+          <Download size={15} />
+          {downloading ? "Generating PDF…" : "Download PDF"}
+        </button>
+      </div>
 
-          {/* ── COVER ── */}
+      <div className="report-root min-h-screen bg-[#F8F8F6] py-4 px-4 md:px-8">
+        <div ref={reportRef} className="max-w-[860px] mx-auto">
+
+          {/* COVER */}
           <div className="bg-white border border-[#E5E7EB]">
             <div className="flex items-stretch">
               <div className="w-1.5 bg-[#1E1E2E] flex-shrink-0" />
@@ -174,43 +149,38 @@ export default function AssessmentReportPage() {
                   Vulnerability Assessment Report
                 </h1>
 
+                {assessmentName && (
+                  <p className="text-lg text-[#6B7280] mt-2">{assessmentName}</p>
+                )}
+
                 <div className="mt-8 h-px bg-[#E5E7EB]" />
 
-                <div className="mt-6 flex items-center gap-4">
-                  {reportSent ? (
-                    <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-[#ECFDF5] border border-[#A7F3D0]">
-                      <div className="w-2 h-2 rounded-full bg-[#059669]" />
-                      <div>
-                        <p className="text-sm font-semibold text-[#065F46]">Report Released</p>
-                        {reportSentAt && (
-                          <p className="text-xs text-[#047857] mt-0.5">
-                            Released on {new Date(reportSentAt).toLocaleString("en-GB", {
-                              day: "2-digit", month: "long", year: "numeric",
-                              hour: "2-digit", minute: "2-digit",
-                            })}
-                          </p>
-                        )}
-                      </div>
+                {/* OFFICIAL BADGE */}
+                <div className="mt-6">
+                  <div className="inline-flex items-center gap-3 px-4 py-3 rounded-lg bg-[#ECFDF5] border border-[#A7F3D0]">
+                    <div className="w-2 h-2 rounded-full bg-[#059669]" />
+                    <div>
+                      <p className="text-sm font-semibold text-[#065F46]">Official Report</p>
+                      {reportSentAt && (
+                        <p className="text-xs text-[#047857] mt-0.5">
+                          Released on {new Date(reportSentAt).toLocaleString("en-GB", {
+                            day: "2-digit", month: "long", year: "numeric",
+                            hour: "2-digit", minute: "2-digit",
+                          })}
+                        </p>
+                      )}
                     </div>
-                  ) : (
-                    <button
-                      onClick={handleSendReport}
-                      disabled={sending}
-                      className="px-5 py-2.5 bg-[#111827] text-white text-sm font-medium hover:bg-[#1F2937] transition disabled:opacity-50 rounded"
-                    >
-                      {sending ? "Sending…" : "Release Report"}
-                    </button>
-                  )}
+                  </div>
                 </div>
 
                 <div className="mt-8 grid grid-cols-2 gap-x-10 gap-y-4 text-sm">
                   <div>
                     <SectionLabel>Client</SectionLabel>
-                    <p className="text-[#111827] font-medium">Client Organization</p>
+                    <p className="text-[#111827] font-medium">{companyName || "—"}</p>
                   </div>
                   <div>
-                    <SectionLabel>Finding ID</SectionLabel>
-                    <p className="text-[#111827] font-medium mono text-xs">{findingId || "—"}</p>
+                    <SectionLabel>Assessment</SectionLabel>
+                    <p className="text-[#111827] font-medium">{assessmentName || "—"}</p>
                   </div>
                   <div>
                     <SectionLabel>Prepared by</SectionLabel>
@@ -234,67 +204,64 @@ export default function AssessmentReportPage() {
             </div>
           ) : (
             <>
-              
-                  {/* Health score */}
-                  <div className="mt-8 flex items-center gap-6">
-                    <div className="relative w-20 h-20 flex-shrink-0">
-                      <svg viewBox="0 0 80 80" className="w-full h-full -rotate-90">
-                        <circle cx="40" cy="40" r="34" fill="none" stroke="#F3F4F6" strokeWidth="8" />
-                        <circle
-                          cx="40" cy="40" r="34" fill="none"
-                          stroke={healthPct >= 70 ? "#059669" : healthPct >= 40 ? "#D97706" : "#DC2626"}
-                          strokeWidth="8"
-                          strokeDasharray={`${(healthPct / 100) * 213.6} 213.6`}
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                      <span className="absolute inset-0 flex items-center justify-center text-base font-bold text-[#111827]">
-                        {healthPct}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-[#111827]">Security Health Score</p>
-                      <p className="text-xs text-[#6B7280] mt-1">Weighted by severity — higher is better</p>
-                    </div>
-                  </div>
+              {/* Health score */}
+              <div className="mt-8 flex items-center gap-6">
+                <div className="relative w-20 h-20 flex-shrink-0">
+                  <svg viewBox="0 0 80 80" className="w-full h-full -rotate-90">
+                    <circle cx="40" cy="40" r="34" fill="none" stroke="#F3F4F6" strokeWidth="8" />
+                    <circle cx="40" cy="40" r="34" fill="none"
+                      stroke={healthPct >= 70 ? "#059669" : healthPct >= 40 ? "#D97706" : "#DC2626"}
+                      strokeWidth="8"
+                      strokeDasharray={`${(healthPct / 100) * 213.6} 213.6`}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <span className="absolute inset-0 flex items-center justify-center text-base font-bold text-[#111827]">
+                    {healthPct}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[#111827]">Security Health Score</p>
+                  <p className="text-xs text-[#6B7280] mt-1">Weighted by severity — higher is better</p>
+                </div>
+              </div>
 
-                  {/* Severity stat cards */}
-                  <div className="mt-8 grid grid-cols-2 md:grid-cols-5 gap-3">
-                    <div className="border border-[#E5E7EB] p-5">
-                      <SectionLabel>Total</SectionLabel>
-                      <p className="text-3xl font-bold text-[#111827]">{findings.length}</p>
-                      <p className="text-xs text-[#9CA3AF] mt-1">findings</p>
-                    </div>
-                    {(["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const).map((key) => {
-                      const s = SEVERITY[key];
-                      const count = stats[key];
-                      const pct = findings.length ? Math.round((count / findings.length) * 100) : 0;
-                      return (
-                        <button
-                          key={key}
-                          onClick={() => setFilter(filter === key ? null : key)}
-                          className={`stat-btn border border-[#E5E7EB] p-5 text-left ${filter === key ? "active" : ""}`}
-                        >
-                          <div className={`w-2 h-2 rounded-full ${s.dot} mb-3`} />
-                          <p className="text-[10px] font-semibold tracking-[0.15em] uppercase text-[#9CA3AF]">{s.label}</p>
-                          <p className={`text-3xl font-bold mt-1 ${s.text}`}>{count}</p>
-                          <div className="mt-3 h-1 bg-[#F3F4F6] rounded-full overflow-hidden">
-                            <div className={`bar-fill h-full rounded-full ${s.dot}`} style={{ width: `${pct}%` }} />
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
+              {/* Severity stat cards */}
+              <div className="mt-8 grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div className="border border-[#E5E7EB] p-5">
+                  <SectionLabel>Total</SectionLabel>
+                  <p className="text-3xl font-bold text-[#111827]">{findings.length}</p>
+                  <p className="text-xs text-[#9CA3AF] mt-1">findings</p>
+                </div>
+                {(["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const).map((key) => {
+                  const s = SEVERITY[key];
+                  const count = stats[key];
+                  const pct = findings.length ? Math.round((count / findings.length) * 100) : 0;
+                  return (
+                    <button key={key}
+                      onClick={() => setFilter(filter === key ? null : key)}
+                      className={`stat-btn border border-[#E5E7EB] p-5 text-left ${filter === key ? "active" : ""}`}
+                    >
+                      <div className={`w-2 h-2 rounded-full ${s.dot} mb-3`} />
+                      <p className="text-[10px] font-semibold tracking-[0.15em] uppercase text-[#9CA3AF]">{s.label}</p>
+                      <p className={`text-3xl font-bold mt-1 ${s.text}`}>{count}</p>
+                      <div className="mt-3 h-1 bg-[#F3F4F6] rounded-full overflow-hidden">
+                        <div className={`bar-fill h-full rounded-full ${s.dot}`} style={{ width: `${pct}%` }} />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
 
-                  {filter && (
-                    <div className="mt-4 flex items-center gap-2">
-                      <span className="text-xs text-[#6B7280]">Filtered by severity:</span>
-                      <span className={`text-xs px-2 py-0.5 rounded ${SEVERITY[filter].badge}`}>{SEVERITY[filter].label}</span>
-                      <button onClick={() => setFilter(null)} className="text-xs text-indigo-600 hover:underline ml-1">Clear filter</button>
-                    </div>
-                  )}
+              {filter && (
+                <div className="mt-4 flex items-center gap-2">
+                  <span className="text-xs text-[#6B7280]">Filtered by severity:</span>
+                  <span className={`text-xs px-2 py-0.5 rounded ${SEVERITY[filter].badge}`}>{SEVERITY[filter].label}</span>
+                  <button onClick={() => setFilter(null)} className="text-xs text-indigo-600 hover:underline ml-1">Clear filter</button>
+                </div>
+              )}
 
-              {/* ── RISK RATING ── */}
+              {/* RISK RATING */}
               <div className="bg-white border border-[#E5E7EB] border-t-0">
                 <div className="px-10 py-10">
                   <SectionLabel>02 · Risk Classification</SectionLabel>
@@ -333,7 +300,7 @@ export default function AssessmentReportPage() {
                 </div>
               </div>
 
-              {/* ── FINDINGS ── */}
+              {/* FINDINGS */}
               <div className="bg-white border border-[#E5E7EB] border-t-0">
                 <div className="px-10 py-10">
                   <SectionLabel>03 · Technical Findings</SectionLabel>
@@ -346,7 +313,6 @@ export default function AssessmentReportPage() {
                   <div className="space-y-0">
                     {Object.entries(groupedFindings).map(([category, items], catIdx) => (
                       <div key={category} className={catIdx > 0 ? "mt-14" : ""}>
-                        {/* Category header */}
                         <div className="flex items-center gap-4 mb-8">
                           <div className="h-px flex-1 bg-[#E5E7EB]" />
                           <span className="text-[10px] font-semibold tracking-[0.2em] uppercase text-[#6B7280] whitespace-nowrap">
@@ -359,8 +325,6 @@ export default function AssessmentReportPage() {
                           {items.map((f, idx) => {
                             const s = SEVERITY[f.severity] || SEVERITY.LOW;
 
-                            // ── Parse dynamicFields ──
-                            // Supports new ordered-array format and legacy flat-object format
                             let dynamicEntries: DynEntry[] = [];
                             let legacyDynamicFields: Record<string, any> = {};
                             try {
@@ -371,8 +335,7 @@ export default function AssessmentReportPage() {
                               } else {
                                 legacyDynamicFields = parsed;
                               }
-                            } 
-                            catch { /* noop */ }
+                            } catch { /* noop */ }
 
                             const fileFields: [string, string][] = dynamicEntries.length === 0
                               ? (Object.entries(legacyDynamicFields).filter(([key, value]) =>
@@ -382,75 +345,46 @@ export default function AssessmentReportPage() {
                                 ) as [string, string][])
                               : [];
 
-                            const orderedEntries = dynamicEntries;
+                            const sevEntry = dynamicEntries.find((e) => e.type === "severity");
+                            const affEntry = dynamicEntries.find((e) => e.label?.toLowerCase() === "affected systems");
+                            const pinSev = sevEntry ? SEVERITY[String(sevEntry.value).toUpperCase()] || SEVERITY.LOW : null;
+                            const orderedEntries = dynamicEntries.filter(
+                              (e) => e.type !== "severity" && e.label?.toLowerCase() !== "affected systems"
+                            );
 
                             return (
-                              <div
-                          key={f.id}
-                          className="finding-enter bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-sm"
-                          style={{ animationDelay: `${idx * 60}ms` }}
-                        >
+                              <div key={f.id}
+                                className="finding-enter bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-sm"
+                                style={{ animationDelay: `${idx * 60}ms` }}
+                              >
+                                <div className={`h-1.5 w-full ${s.dot}`} />
+                                <div className="p-8">
+                                  <div className="flex items-start justify-between gap-6">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex flex-wrap items-center gap-2 mb-3">
+                                        <span className="text-[11px] px-2.5 py-1 bg-[#111827] text-white rounded font-medium">
+                                          Finding #{idx + 1}
+                                        </span>
+                                        <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded ${s.badge}`}>
+                                          <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                                          {s.label}
+                                        </span>
+                                        {f.category && (
+                                          <span className="text-[11px] px-2.5 py-1 bg-[#F9FAFB] border border-[#E5E7EB] text-[#6B7280] rounded">
+                                            {f.category}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <h4 className="text-[22px] font-bold text-[#111827] leading-snug">{f.title}</h4>
+                                    </div>
+                                    {f.cvssScore && (
+                                      <div className={`flex-shrink-0 ${s.soft} border border-[#E5E7EB] px-5 py-4 text-center min-w-[90px] rounded-xl`}>
+                                        <p className="text-[9px] tracking-[0.15em] uppercase text-[#9CA3AF] font-semibold mb-1">CVSS</p>
+                                        <p className={`text-3xl font-bold ${s.text}`}>{Number(f.cvssScore).toFixed(1)}</p>
+                                      </div>
+                                    )}
+                                  </div>
 
-                          {/* TOP SEVERITY BAR */}
-
-                          <div className={`h-1.5 w-full ${s.dot}`} />
-                          <div className="p-8">
-                            {/* FINDING HEADER */}
-                            <div className="flex items-start justify-between gap-6">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex flex-wrap items-center gap-2 mb-3">
-                                  {/* FINDING NUMBER */}
-                                  <span className="text-[11px] px-2.5 py-1 bg-[#111827] text-white rounded font-medium">
-                                    Finding #{idx + 1}
-                                  </span>
-                                  {/* SEVERITY */}
-                                  <span
-                                    className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded ${s.badge}`}
-                                  >
-                                    <span
-                                      className={`w-1.5 h-1.5 rounded-full ${s.dot}`}
-                                    />
-                                    {s.label}
-                                  </span>
-
-                                  {/* CATEGORY */}
-
-                                  {f.category && (
-                                    <span className="text-[11px] px-2.5 py-1 bg-[#F9FAFB] border border-[#E5E7EB] text-[#6B7280] rounded">
-                                      {f.category}
-                                    </span>
-                                  )}
-                                  {/* STATUS */}
-                                  {f.status && (
-                                    <span className="text-[11px] px-2.5 py-1 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded">
-                                      {f.status}
-                                    </span>
-                                  )}
-                                </div>
-
-                                {/* TITLE */}
-
-                                <h4 className="text-[22px] font-bold text-[#111827] leading-snug">
-                                  {f.title}
-                                </h4>
-                              </div>
-
-                              {/* CVSS */}
-
-                              {f.cvssScore && (
-                                <div
-                                  className={`flex-shrink-0 ${s.soft} border border-[#E5E7EB] px-5 py-4 text-center min-w-[90px] rounded-xl`}
-                                >
-                                  <p className="text-[9px] tracking-[0.15em] uppercase text-[#9CA3AF] font-semibold mb-1">
-                                    CVSS
-                                  </p>
-
-                                  <p className={`text-3xl font-bold ${s.text}`}>
-                                    {Number(f.cvssScore).toFixed(1)}
-                                  </p>
-                                </div>
-                              )}
-                            </div>
                                   <div className="mt-6 space-y-6">
                                     {orderedEntries.map((entry, ei) => {
                                       if (entry.type === "subtopic") {
@@ -458,50 +392,27 @@ export default function AssessmentReportPage() {
                                           <div key={ei} className="mt-10 mb-4">
                                             <div className="flex items-center gap-3">
                                               <div className="h-px flex-1 bg-[#E5E7EB]" />
-                                              <span className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#6B7280] whitespace-nowrap px-1">
-                                                {entry.label}
-                                              </span>
+                                              <span className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#6B7280] whitespace-nowrap px-1">{entry.label}</span>
                                               <div className="h-px flex-1 bg-[#E5E7EB]" />
                                             </div>
                                           </div>
                                         );
                                       }
                                       if (entry.type === "heading") {
-                                        return (
-                                          <div key={ei} className="mt-8">
-                                            <h3 className="text-[22px] font-bold text-[#111827]">{entry.value}</h3>
-                                          </div>
-                                        );
-                                      }
-                                      if (entry.type === "severity") {
-                                        const sev = SEVERITY[String(entry.value).toUpperCase()] || SEVERITY.LOW;
-                                        return (
-                                          <div key={ei}>
-                                            <SectionLabel>Severity</SectionLabel>
-                                            <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded ${sev.badge}`}>
-                                              <span className={`w-1.5 h-1.5 rounded-full ${sev.dot}`} />
-                                              {sev.label}
-                                            </span>
-                                          </div>
-                                        );
+                                        return <div key={ei} className="mt-8"><h3 className="text-[22px] font-bold text-[#111827]">{entry.value}</h3></div>;
                                       }
                                       if (entry.type === "file") {
                                         return (
                                           <div key={ei}>
                                             <SectionLabel>{entry.label}</SectionLabel>
-                                            <a
-                                              href={`${API_BASE}/uploads/${entry.value}`}
-                                              target="_blank"
-                                              rel="noreferrer"
+                                            <a href={`${API_BASE}/uploads/${entry.value}`} target="_blank" rel="noreferrer"
                                               className="flex items-center justify-between border border-[#E5E7EB] px-4 py-3 hover:bg-[#F9FAFB] transition group rounded"
                                             >
                                               <div>
                                                 <p className="text-sm font-medium text-[#111827]">View Attachment</p>
                                                 <p className="text-xs text-[#9CA3AF] mt-0.5">Click to open</p>
                                               </div>
-                                              <span className="text-xs px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-100 group-hover:bg-indigo-100 transition rounded">
-                                                Open ↗
-                                              </span>
+                                              <span className="text-xs px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-100 group-hover:bg-indigo-100 transition rounded">Open ↗</span>
                                             </a>
                                           </div>
                                         );
@@ -515,11 +426,7 @@ export default function AssessmentReportPage() {
                                     })}
 
                                     {dynamicEntries.length === 0 && Object.entries(legacyDynamicFields)
-                                      .filter(([key, value]) =>
-                                        key !== "subtopic" &&
-                                        typeof value === "string" &&
-                                        !/\.(png|jpe?g|pdf)$/i.test(value)
-                                      )
+                                      .filter(([key, value]) => key !== "subtopic" && typeof value === "string" && !/\.(png|jpe?g|pdf)$/i.test(value))
                                       .map(([key, value]) => (
                                         <div key={key}>
                                           <SectionLabel>{key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</SectionLabel>
@@ -533,41 +440,27 @@ export default function AssessmentReportPage() {
                                         <SectionLabel>Attachments</SectionLabel>
                                         <div className="space-y-2">
                                           {f.attachment && (
-                                            <a
-                                              href={`${API_BASE}/uploads/${f.attachment}`}
-                                              target="_blank"
-                                              rel="noreferrer"
+                                            <a href={`${API_BASE}/uploads/${f.attachment}`} target="_blank" rel="noreferrer"
                                               className="flex items-center justify-between border border-[#E5E7EB] px-4 py-3 hover:bg-[#F9FAFB] transition group rounded"
                                             >
                                               <div>
                                                 <p className="text-sm font-medium text-[#111827]">Primary Attachment</p>
                                                 <p className="text-xs text-[#9CA3AF] mt-0.5">Click to view evidence file</p>
                                               </div>
-                                              <span className="text-xs px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-100 group-hover:bg-indigo-100 transition rounded">
-                                                Open ↗
-                                              </span>
+                                              <span className="text-xs px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-100 group-hover:bg-indigo-100 transition rounded">Open ↗</span>
                                             </a>
                                           )}
-                                          {fileFields.map(([label, value]) => {
-                                            const displayLabel = label.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-                                            return (
-                                              <a
-                                                key={label}
-                                                href={`${API_BASE}/uploads/${value}`}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="flex items-center justify-between border border-[#E5E7EB] px-4 py-3 hover:bg-[#F9FAFB] transition group rounded"
-                                              >
-                                                <div>
-                                                  <p className="text-sm font-medium text-[#111827]">{displayLabel}</p>
-                                                  <p className="text-xs text-[#9CA3AF] mt-0.5">Click to view evidence file</p>
-                                                </div>
-                                                <span className="text-xs px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-100 group-hover:bg-indigo-100 transition rounded">
-                                                  Open ↗
-                                                </span>
-                                              </a>
-                                            );
-                                          })}
+                                          {fileFields.map(([label, value]) => (
+                                            <a key={label} href={`${API_BASE}/uploads/${value}`} target="_blank" rel="noreferrer"
+                                              className="flex items-center justify-between border border-[#E5E7EB] px-4 py-3 hover:bg-[#F9FAFB] transition group rounded"
+                                            >
+                                              <div>
+                                                <p className="text-sm font-medium text-[#111827]">{label.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</p>
+                                                <p className="text-xs text-[#9CA3AF] mt-0.5">Click to view evidence file</p>
+                                              </div>
+                                              <span className="text-xs px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-100 group-hover:bg-indigo-100 transition rounded">Open ↗</span>
+                                            </a>
+                                          ))}
                                         </div>
                                       </div>
                                     )}
@@ -591,7 +484,27 @@ export default function AssessmentReportPage() {
                                     )}
                                   </div>
 
-                                  {/* Finding footer */}
+                                  {/* Severity + Affected Systems pinned to bottom */}
+                                  {(pinSev || affEntry?.value) && (
+                                    <div className="mt-6 pt-5 border-t border-[#F3F4F6] space-y-4">
+                                      {pinSev && (
+                                        <div>
+                                          <SectionLabel>Severity</SectionLabel>
+                                          <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded ${pinSev.badge}`}>
+                                            <span className={`w-1.5 h-1.5 rounded-full ${pinSev.dot}`} />
+                                            {pinSev.label}
+                                          </span>
+                                        </div>
+                                      )}
+                                      {affEntry?.value && (
+                                        <div>
+                                          <SectionLabel>Affected Systems</SectionLabel>
+                                          <p className="text-[#374151] leading-7 text-[14px] whitespace-pre-wrap">{affEntry.value}</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
                                   <div className="mt-6 pt-4 border-t border-[#F3F4F6] flex justify-between text-[11px] text-[#9CA3AF]">
                                     <span className="mono">{f.cvssVector || ""}</span>
                                     <div className="flex gap-4">
@@ -600,7 +513,6 @@ export default function AssessmentReportPage() {
                                     </div>
                                   </div>
                                 </div>
-
                                 {idx < items.length - 1 && <div className="mt-10 border-b border-[#F3F4F6]" />}
                               </div>
                             );
@@ -612,19 +524,14 @@ export default function AssessmentReportPage() {
                     {filteredFindings.length === 0 && (
                       <div className="text-center py-20 text-[#9CA3AF]">
                         <p className="text-4xl mb-3">—</p>
-                        <p className="text-sm">No findings match the current filter.</p>
-                        {filter && (
-                          <button onClick={() => setFilter(null)} className="mt-3 text-xs text-indigo-600 hover:underline">
-                            Clear filter
-                          </button>
-                        )}
+                        <p className="text-sm">No findings available.</p>
                       </div>
                     )}
                   </div>
                 </div>
               </div>
 
-              {/* ── FOOTER ── */}
+              {/* FOOTER */}
               <div className="bg-white border border-[#E5E7EB] border-t-0">
                 <div className="px-10 py-8 flex items-center justify-between">
                   <p className="text-xs text-[#9CA3AF]">ISCO Technologies · Vulnerability Assessment Report</p>

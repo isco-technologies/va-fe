@@ -1,9 +1,6 @@
 export type UserRole =
   | "SUPER_ADMIN"
-  | "ADMIN"
-  | "AUDITOR"
   | "CLIENT";
-
 
 export interface Company {
   id: string;

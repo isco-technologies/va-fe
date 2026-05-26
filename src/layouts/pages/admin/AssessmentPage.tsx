@@ -511,15 +511,10 @@ const critical =
                           }
                         </span>
                       </td>
-
                       {/* PROGRESS */}
-
                       <td className="px-5 py-5">
-
                         <div className="flex items-center gap-3">
-
                           <div className="w-28 h-2 bg-gray-200 rounded-full overflow-hidden">
-
                             <div
                               className="h-full bg-indigo-600 rounded-full"
                               style={{
@@ -527,7 +522,6 @@ const critical =
                               }}
                             />
                           </div>
-
                           <span className="bg-green-100 text-green-700 text-xs font-medium px-3 py-1 rounded-full">
                             {
                               stats.progress

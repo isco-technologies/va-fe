@@ -8,6 +8,7 @@ import { useAppDispatch } from "../../../feature/hooks/useAppDispatch";
 import { useAppSelector } from "../../../feature/hooks/useAppSelector";
 import {fetchChecklists,addChecklist,editChecklist,setChecklistSearch,} from "../../../feature/checklists/checklistSlice";
 import type { Checklists } from "../../../api/checklistAPI";
+import ApiClient from "../../../api/Axios";
 
 export default function ChecklistPage() {
   const dispatch = useAppDispatch();
@@ -85,16 +86,16 @@ export default function ChecklistPage() {
   };
 
   const handleArchive = async (id: string) => {
-    const ok = window.confirm("Archive this checklist?");
-    if (!ok) return;
-    try {
-      await dispatch(editChecklist({ id, payload: { status: "ARCHIVED" } })).unwrap();
-      dispatch(fetchChecklists());
-    } catch (err) {
-      console.error("Error archiving checklist:", err);
-      window.alert("Failed to archive checklist.");
-    }
-  };
+  const ok = window.confirm("Archive this checklist?");
+  if (!ok) return;
+  try {
+    await ApiClient.patch(`/checklists/${id}/archive`);
+    dispatch(fetchChecklists());
+  } catch (err: any) {
+    console.error("Error archiving checklist:", err);
+    window.alert(err?.response?.data?.message || "Failed to archive checklist.");
+  }
+};
 
   const openDomains = (checklistId: string) => {
     navigate(`/admin/checklists/${checklistId}/domains`);

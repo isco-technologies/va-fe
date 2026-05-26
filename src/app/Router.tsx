@@ -19,6 +19,7 @@ import ReportListPage from "../layouts/pages/admin/ReportfListPage";
 import ClientReportViewPage from "../layouts/pages/client/ClientReportViewPage";
 import ClientPolicyPage from "../layouts/pages/client/ClientPolicyPage";
 import ClientDashboard from "../layouts/pages/client/ClientDashboard";
+import ArchivesPage from "../layouts/pages/admin/ArchivesPage";
 
 // AUTH HELPER
 const getAuth = () => {
@@ -52,6 +53,7 @@ const router = createBrowserRouter([
       { path: "assessment", element: <AssessmentPage /> },
       { path: "companies", element: <CompanyPage /> },
       { path: "checklists", element: <ChecklistPage /> },
+      { path: "archives", element: <ArchivesPage /> },
       { path: "reports", element: <AdminReportPage /> },
       
       { path: "reports/edit/:assessmentId", element: <ReportListPage /> },

@@ -14,15 +14,11 @@ import type { User as UserType, UserRole } from "../../../types";
 
 const ROLE_STYLES: Record<string, string> = {
   SUPER_ADMIN: "bg-indigo-50 text-indigo-700 border border-indigo-200",
-  ADMIN:       "bg-green-50 text-green-700 border border-green-200",
-  AUDITOR:     "bg-yellow-50 text-yellow-700 border border-yellow-200",
   CLIENT:      "bg-gray-100 text-gray-600 border border-gray-200",
 };
 
 const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN: "Super Admin",
-  ADMIN:       "Admin",
-  AUDITOR:     "Auditor",
   CLIENT:      "Client",
 };
 

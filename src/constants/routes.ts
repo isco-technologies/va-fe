@@ -20,7 +20,8 @@ export const ROUTES = {
   ADMIN_CHECKLIST_DOMAINS:(checklistId: string) =>`/admin/checklists/${checklistId}/domains`,
   // ASSESSMENT REVIEW
   ADMIN_ASSESSMENT_REVIEW:(assessmentId: string ) =>`/admin/assessments/${assessmentId}/review`,
-  
+  // ARCHIVES
+  ADMIN_ARCHIVES:"/admin/archives",
   // CLIENT
 
   CLIENT_DASHBOARD:"/client/dashboard",

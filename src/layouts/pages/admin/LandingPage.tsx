@@ -13,7 +13,7 @@ export default function LandingPage() {
           </span>
 
           <h1 className="mt-6 max-w-4xl text-4xl font-bold tracking-tight text-white sm:text-5xl">
-            Vulnerability Assessment <br />
+            Cyber Security and Data Protection Assessments <br />
             <span className="text-indigo-200">Made Structured & Reliable</span>
           </h1>
 

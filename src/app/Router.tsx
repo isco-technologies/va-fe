@@ -83,6 +83,7 @@ const router = createBrowserRouter([
       
       { index: true, element: <Navigate to="assessment" replace /> },
       { path: "assessment", element: <ClientAssessmentPage /> },
+      { path: "assessment/:id", element: <ClientAssessmentPage /> },
       { path: "reports", element: <ClientReportsPage /> },
       { path: "reports/:findingId", element: <ClientReportViewPage /> },
       { path: "consent", element: <ClientPolicyPage /> },

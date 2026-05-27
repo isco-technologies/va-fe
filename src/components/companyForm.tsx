@@ -1,7 +1,5 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useEffect, useState } from "react";
-import type { Company } from "../types";
-import Select from "react-select";
+import type { Company } from "../../src/types";
 
 interface Props {
   company?: Company;
@@ -12,15 +10,6 @@ interface Props {
   ) => void;
 }
 
-const industryOptions = [
-  { value: "technology", label: "Technology" },
-  { value: "finance", label: "Finance" },
-  { value: "healthcare", label: "Healthcare" },
-  { value: "manufacturing", label: "Manufacturing" },
-  { value: "education", label: "Education" },
-  { value: "government", label: "Government" },
-];
-
 const CompanyForm: React.FC<Props> = ({
   company,
   isOpen,
@@ -28,65 +17,40 @@ const CompanyForm: React.FC<Props> = ({
   onSubmit,
 }) => {
   const [name, setName] = useState("");
-  const [industry, setIndustry] = useState<{ value: string; label: string } | null>(null);
+  const [industry, setIndustry] = useState("");
   const [description, setDescription] = useState("");
-  const [contactEmail, setContactEmail] = useState("");
-  const [contactPhone, setContactPhone] = useState("");
-  const [address, setAddress] = useState("");
 
   useEffect(() => {
     if (company) {
       setName(company.name);
-      setIndustry(
-        company.industry
-          ? { value: company.industry, label: company.industry }
-          : null
-      );
+      setIndustry(company.industry || "");
       setDescription(company.description || "");
-      setContactEmail(String(company.contactEmail || ""));
-      setContactPhone(String(company.contactPhone || ""));
-      setAddress(String(company.address || ""));
     } else {
       setName("");
-      setIndustry(null);
+      setIndustry("");
       setDescription("");
-      setContactEmail("");
-      setContactPhone("");
-      setAddress("");
     }
-  }, [company, isOpen]);
+  }, [company]);
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
     onSubmit({
       name,
-      industry: industry?.value || "",
+      industry,
       description,
-      contactEmail,
-      contactPhone,
-      address,
-      email: contactEmail,
-      phone: contactPhone,
-      location: address,
-      contacts: [],
-      status: "ACTIVE"
     });
   };
 
   return (
-    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6">
-
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg w-full max-w-md p-6">
         <h2 className="text-xl font-semibold mb-4">
           {company ? "Edit Company" : "Add Company"}
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-
-          {/* Company Name */}
           <input
             className="w-full border rounded px-3 py-2"
             placeholder="Company name"
@@ -95,15 +59,13 @@ const CompanyForm: React.FC<Props> = ({
             required
           />
 
-          {/* Industry Select */}
-          <Select
-            options={industryOptions}
+          <input
+            className="w-full border rounded px-3 py-2"
+            placeholder="Industry"
             value={industry}
-            onChange={(option) => setIndustry(option)}
-            placeholder="Select industry"
+            onChange={(e) => setIndustry(e.target.value)}
           />
 
-          {/* Description */}
           <textarea
             className="w-full border rounded px-3 py-2"
             placeholder="Description"
@@ -111,49 +73,21 @@ const CompanyForm: React.FC<Props> = ({
             onChange={(e) => setDescription(e.target.value)}
           />
 
-          {/* Email */}
-          <input
-            type="email"
-            className="w-full border rounded px-3 py-2"
-            placeholder="Contact Email"
-            value={contactEmail}
-            onChange={(e) => setContactEmail(e.target.value)}
-          />
-
-          {/* Phone */}
-          <input
-            className="w-full border rounded px-3 py-2"
-            placeholder="Contact Phone"
-            value={contactPhone}
-            onChange={(e) => setContactPhone(e.target.value)}
-          />
-
-          {/* Address */}
-          <input
-            className="w-full border rounded px-3 py-2"
-            placeholder="Address"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-          />
-
-          {/* Buttons */}
-          <div className="flex justify-end gap-3 pt-2">
+          <div className="flex justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              className="px-4 py-2 text-gray-600"
             >
               Cancel
             </button>
-
             <button
               type="submit"
-              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+              className="px-4 py-2 bg-indigo-600 text-white rounded"
             >
               Save
             </button>
           </div>
-
         </form>
       </div>
     </div>

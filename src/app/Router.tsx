@@ -21,14 +21,6 @@ import ClientPolicyPage from "../layouts/pages/client/ClientPolicyPage";
 import ClientDashboard from "../layouts/pages/client/ClientDashboard";
 import ArchivesPage from "../layouts/pages/admin/ArchivesPage";
 
-// AUTH HELPER
-const getAuth = () => {
-  const state = useAuthStore.getState();
-  return {
-    isAuthenticated: !!state.token,
-    role: state.user?.role,
-  };
-};
 
 const router = createBrowserRouter([
   //PUBLIC 
@@ -42,7 +34,7 @@ const router = createBrowserRouter([
     path: "/admin",
     element: (
       <ProtectedRoute
-        {...getAuth()}
+        
         allowedRoles={["ADMIN", "SUPER_ADMIN"]}
       />
     ),
@@ -75,7 +67,7 @@ const router = createBrowserRouter([
 
   // CLIENT 
   {
-    path: "/client",element: (<ProtectedRoute{...getAuth()}
+    path: "/client",element: (<ProtectedRoute
         allowedRoles={["CLIENT"]}
       />
     ),
@@ -95,7 +87,9 @@ const router = createBrowserRouter([
   {
     path: "*",
     element: (() => {
-      const { isAuthenticated, role } = getAuth();
+      const state = useAuthStore.getState();
+      const isAuthenticated = !!state.token;
+      const role = state.user?.role;
 
       if (!isAuthenticated) return <Navigate to="/login" replace />;
 

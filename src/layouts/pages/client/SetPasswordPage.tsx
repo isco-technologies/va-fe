@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Lock, Eye, EyeOff } from "lucide-react";
 import apiClient from "../../../api/Axios";
+import { useAuthStore } from "../../../feature/store/authStore";
 
 export default function SetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -41,12 +42,16 @@ export default function SetPasswordPage() {
     try {
       setLoading(true);
 
-      await apiClient.post("/auth/set-password", {
-        token,
-        password,
-      });
+      const response = await apiClient.post("/auth/set-password", {
+    token,
+    password,
+        });
 
-      navigate("/consent");
+    const { token: authToken, user } = response.data;
+    localStorage.setItem("va-token", authToken);
+    useAuthStore.setState({ token: authToken, user });
+
+    navigate("/client/consent");
     } catch (err: any) {
       setError(
         err?.response?.data?.message ||

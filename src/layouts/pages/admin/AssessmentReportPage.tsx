@@ -5,8 +5,6 @@ import AppLayout from "../../appLayout";
 import apiClient from "../../../api/Axios";
 
 
-const API_BASE = "http://localhost:4000";
-
 const SEVERITY: Record<string, { label: string; text: string; badge: string; border: string; soft: string; dot: string }> = {
   CRITICAL: {
     label: "Critical",
@@ -490,7 +488,7 @@ export default function AssessmentReportPage() {
                                           <div key={ei}>
                                             <SectionLabel>{entry.label}</SectionLabel>
                                             <a
-                                              href={`${API_BASE}/uploads/${entry.value}`}
+                                              href={entry.value || "#"}
                                               target="_blank"
                                               rel="noreferrer"
                                               className="flex items-center justify-between border border-[#E5E7EB] px-4 py-3 hover:bg-[#F9FAFB] transition group rounded"
@@ -534,7 +532,7 @@ export default function AssessmentReportPage() {
                                         <div className="space-y-2">
                                           {f.attachment && (
                                             <a
-                                              href={`${API_BASE}/uploads/${f.attachment}`}
+                                              href={f.attachment || "#"}
                                               target="_blank"
                                               rel="noreferrer"
                                               className="flex items-center justify-between border border-[#E5E7EB] px-4 py-3 hover:bg-[#F9FAFB] transition group rounded"
@@ -553,7 +551,7 @@ export default function AssessmentReportPage() {
                                             return (
                                               <a
                                                 key={label}
-                                                href={`${API_BASE}/uploads/${value}`}
+                                                href={value || "#"}
                                                 target="_blank"
                                                 rel="noreferrer"
                                                 className="flex items-center justify-between border border-[#E5E7EB] px-4 py-3 hover:bg-[#F9FAFB] transition group rounded"

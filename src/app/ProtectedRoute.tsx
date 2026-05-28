@@ -12,7 +12,7 @@ export default function ProtectedRoute({ allowedRoles }: Props) {
   const role = user?.role;
 
   if (!isAuthenticated) {
-    return <Navigate to="/landingPage" replace />;
+    return <Navigate to="/login" replace />;
   }
   if (allowedRoles && role && !allowedRoles.includes(role)) {
     return <Navigate to="/unauthorized" replace />;

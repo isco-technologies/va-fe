@@ -1,13 +1,15 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from "react";
 import AppLayout from "../../appLayout";
 import apiClient from "../../../api/Axios";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { useParams } from "react-router-dom";
 
 type Assessment = {
   id: string;
   checklist: { name: string };
   company: { name: string };
-  status: "PENDING" | "IN_PROGRESS" | "COMPLETED";
+  status: "PENDING" | "IN PROGRESS" | "COMPLETED";
   progress: number;
 };
 
@@ -33,6 +35,7 @@ type Domain = {
 };
 
 export default function ClientAssessmentPage() {
+  const {id} = useParams <{id: string}>();
   const [activeTab, setActiveTab] = useState("all");
   const [search, setSearch] = useState("");
   const [assessments, setAssessments] = useState<Assessment[]>([]);
@@ -48,33 +51,33 @@ export default function ClientAssessmentPage() {
   const itemsPerPage = 1;
 
   useEffect(() => {
-    fetchAssessments();
-  }, []);
+  fetchAssessments().then((list) => {
+    if (id && list.length > 0) {
+      const target = list.find((a: Assessment) => a.id === id);
+      if (target) openAssessment(target);
+    }
+  });
+}, [id]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [currentPage]);
 
-  const fetchAssessments = async () => {
-    try {
-      const res = await apiClient.get("/assessments/client");
-      const data = res.data;
-
-      const safeArray = Array.isArray(data)
-        ? data
-        : Array.isArray(data.assessments)
-        ? data.assessments
-        : Array.isArray(data.data)
-        ? data.data
-        : [];
-
-      setAssessments(safeArray);
-    } catch (err) {
-      console.error(err);
-      setAssessments([]);
-    }
-  };
-
+  const fetchAssessments = async (): Promise<Assessment[]> => {
+  try {
+    const res = await apiClient.get("/assessments/client");
+    const data = res.data;
+    const safeArray = Array.isArray(data) ? data
+      : Array.isArray(data.assessments) ? data.assessments
+      : Array.isArray(data.data) ? data.data : [];
+    setAssessments(safeArray);
+    return safeArray;
+  } catch (err) {
+    console.error(err);
+    setAssessments([]);
+    return [];
+  }
+};
   const openAssessment = async (assessment: Assessment) => {
     try {
       setLoading(true);
@@ -515,7 +518,7 @@ export default function ClientAssessmentPage() {
               />
 
               <div className="flex gap-6 border-b whitespace-nowrap">
-                {["all", "PENDING", "IN_PROGRESS", "COMPLETED"].map((tab) => (
+                {["all", "PENDING", "IN PROGRESS", "COMPLETED"].map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}

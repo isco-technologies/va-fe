@@ -155,9 +155,8 @@ export default function DomainRow({
 
     if (!deletingQuestionId) return;
 
-    await apiClient.delete(
-      `/domains/${domain.id}/questions/${deletingQuestionId}`
-    );
+    await apiClient.delete(`/questions/${deletingQuestionId}`);
+    
 
     setQuestions(prev =>
       prev.filter(q => q.id !== deletingQuestionId)

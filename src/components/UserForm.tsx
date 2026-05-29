@@ -18,8 +18,6 @@ interface UserFormProps {
 
 const roleOptions = [
   { value: "SUPER_ADMIN", label: "Super Admin" },
-  { value: "ADMIN", label: "Company Admin" },
-  { value: "AUDITOR", label: "Auditor" },
   { value: "CLIENT", label: "Client" },
 ];
 

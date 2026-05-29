@@ -8,7 +8,7 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { login, } = useAuthStore();
+  const { login } = useAuthStore();
 
   const [credentials, setCredentials] = useState({
     email: "",

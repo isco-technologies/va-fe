@@ -29,7 +29,7 @@ export interface Assessment {
 }
 
 interface AssessmentState {
-  details: any;
+  details: unknown;
   assessments: Assessment[];
   isLoading: boolean;
   error: string | null;
@@ -49,23 +49,23 @@ export const fetchAssessments = createAsyncThunk<
 >("assessments/fetchAll", async (_, { rejectWithValue }) => {
   try {
     return await fetchAssessmentsAPI();
-  } catch (err: any) {
+  } catch (err: unknown) {
     return rejectWithValue(
-      err.response?.data?.message || "Failed to fetch assessments"
+      (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Failed to fetch assessments"
     );
   }
 });
 
 export const createAssessment = createAsyncThunk<
   Assessment,
-  { name: string; companyId: string; checklistId: string },
+  { name: string; type: string; companyId: string; conductedById: string },
   { rejectValue: string }
 >("assessments/create", async (data, { rejectWithValue }) => {
   try {
     return await createAssessmentAPI(data);
-  } catch (err: any) {
+  } catch (err: unknown) {
     return rejectWithValue(
-      err.response?.data?.message || "Failed to create assessment"
+      (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Failed to create assessment"
     );
   }
 });

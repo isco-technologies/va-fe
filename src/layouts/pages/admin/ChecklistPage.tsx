@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, RefreshCw, ClipboardList, Archive, Layers } from "lucide-react";
@@ -76,7 +77,7 @@ const filtered = useMemo(() => {
         ).unwrap();
       } else {
         await dispatch(
-          addChecklist({ name: data.name, description: data.description, status: "INACTIVE" })
+          addChecklist({ name: data.name, description: data.description })
         ).unwrap();
       }
       dispatch(fetchChecklists());

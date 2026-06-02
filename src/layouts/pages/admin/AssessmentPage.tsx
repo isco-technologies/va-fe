@@ -48,6 +48,8 @@ const Assessments = () => {
           companyId: selectedCompany,
           checklistId: selectedChecklist,
           name: "",
+          type: "",
+          conductedById: ""
         })
       );
       const payload = result.payload as any;

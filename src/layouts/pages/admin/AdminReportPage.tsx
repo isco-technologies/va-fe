@@ -17,8 +17,6 @@ type ReportingAssessment = {
 
   reportStatus:
     | "NOT_STARTED"
-    | "DRAFT"
-    | "COMPLETED"
     | "RELEASED";
 
   reportReleased: boolean;
@@ -460,9 +458,7 @@ export default function AdminReportPage() {
                               {assessment.reportStatus ===
                               "NOT_STARTED"
                                 ? "Create Report"
-                                : assessment.reportStatus ===
-                                  "DRAFT"
-                                ? "Continue"
+
                                 : assessment.reportStatus ===
                                   "RELEASED"
                                 ? "View Report"

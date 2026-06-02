@@ -73,7 +73,7 @@ export default function AssessmentReportPage() {
   const [findings, setFindings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string | null>(null);
-  const [, setAssessmentId] = useState<string | null>(null);
+  const [assessmentId, setAssessmentId] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [reportSent, setReportSent] = useState(false);
   const [reportSentAt, setReportSentAt] = useState<string | null>(null);
@@ -87,29 +87,28 @@ export default function AssessmentReportPage() {
       if (!finding) { setFindings([]); return; }
       setFindings([finding]);
       setAssessmentId(finding.assessment?.id || null);
-      setReportSent(finding.reportSent || false);
-      setReportSentAt(finding.reportSentAt || null);
+      setReportSent(finding.assessment?.reportSent || false);
+      setReportSentAt(finding.assessment?.reportSentAt || null);
     })
     .catch((err) => { console.error(err); setFindings([]); })
     .finally(() => setLoading(false));
 }, [findingId]);
 
   const handleSendReport = async () => {
-    if (!findingId) return;
-    try {
-      setSending(true);
-      await apiClient.post(`/reports/send/${findingId}`);
-      setReportSent(true);
-      setReportSentAt(new Date().toISOString());
-      alert("Report released successfully");
-    } catch (error) {
-      console.error(error);
-      alert("Failed to release report");
-    } finally {
-      setSending(false);
-    }
-  };
-
+  if (!assessmentId) return;
+  try {
+    setSending(true);
+    await apiClient.post(`/reports/send/${assessmentId}`);
+    setReportSent(true);
+    setReportSentAt(new Date().toISOString());
+    alert("Report released successfully");
+  } catch (error) {
+    console.error(error);
+    alert("Failed to release report");
+  } finally {
+    setSending(false);
+  }
+};
   const stats = useMemo(() => ({
     CRITICAL: findings.filter((f) => f.severity === "CRITICAL").length,
     HIGH: findings.filter((f) => f.severity === "HIGH").length,

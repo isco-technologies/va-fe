@@ -2,7 +2,7 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import {fetchAssessmentsAPI,createAssessmentAPI,} from "../../api/Assessment.api";
 
 export type AssessmentStatus =
-  | "DRAFT"
+
   | "IN_PROGRESS"
   | "COMPLETED";
 
@@ -58,7 +58,7 @@ export const fetchAssessments = createAsyncThunk<
 
 export const createAssessment = createAsyncThunk<
   Assessment,
-  { name: string; type: string; companyId: string; conductedById: string },
+  { name: string; type: string; companyId: string; conductedById: string; checklistId: string   },
   { rejectValue: string }
 >("assessments/create", async (data, { rejectWithValue }) => {
   try {

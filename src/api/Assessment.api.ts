@@ -7,14 +7,13 @@ export const fetchAssessmentsAPI = async () => {
 
 export const createAssessmentAPI = async (data: {
   name: string;
-  type: string;
   companyId: string;
-  conductedById: string;
+  checklistId: string;
+  conductedById?: string;
 }) => {
   const res = await axios.post("/assessments", data);
   return res.data;
 };
-
 export const updateAssessmentStatusAPI = async (
   id: string,
   status: string

@@ -1,28 +1,26 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, Pencil, Archive, Search } from "lucide-react";
 import { toast } from "react-hot-toast";
 import AppLayout from "../../appLayout";
 import Pagination from "../../../components/Pagination";
 import UserForm from "../../../components/UserForm";
 import { useAppDispatch } from "../../../feature/hooks/useAppDispatch";
 import { useAppSelector } from "../../../feature/hooks/useAppSelector";
-import {fetchUsers,addUser,updateUser,deleteUser,} from "../../../feature/users/userSlice";
+import { fetchUsers, addUser, updateUser, archiveUser } from "../../../feature/users/userSlice";
 import { fetchCompanies } from "../../../feature/company/companySlice";
 import type { User as UserType, UserRole } from "../../../types";
+import { useAuthStore } from "../../../feature/store/authStore";
 
-// HELPERS 
-
+// HELPERS
 const ROLE_STYLES: Record<string, string> = {
-  SUPER_ADMIN: "bg-indigo-50 text-indigo-700 border border-indigo-200",
-  CLIENT:      "bg-gray-100 text-gray-600 border border-gray-200",
+  ADMIN:  "bg-indigo-50 text-indigo-700 border border-indigo-200",
+  CLIENT: "bg-gray-100 text-gray-600 border border-gray-200",
 };
-
 const ROLE_LABELS: Record<string, string> = {
-  SUPER_ADMIN: "Super Admin",
-  CLIENT:      "Client",
+  ADMIN:  "Admin",
+  CLIENT: "Client",
 };
-
 function RoleBadge({ role }: { role: UserRole }) {
   return (
     <span
@@ -34,7 +32,6 @@ function RoleBadge({ role }: { role: UserRole }) {
     </span>
   );
 }
-
 function Avatar({ name }: { name: string }) {
   const initials = name
     .split(" ")
@@ -49,11 +46,10 @@ function Avatar({ name }: { name: string }) {
   );
 }
 
-//  COMPONENT 
-
+// COMPONENT
 export default function UsersPage() {
   const dispatch = useAppDispatch();
-
+  const currentUser = useAuthStore((state) => state.user);
   const usersState = useAppSelector((state) => state.users);
   const users = usersState?.users ?? [];
   const loading = usersState?.isLoading ?? false;
@@ -99,15 +95,17 @@ export default function UsersPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    try {
-      await dispatch(deleteUser(id)).unwrap();
-      toast.success("User deleted");
-      await dispatch(fetchUsers({ page: currentPage, limit: 20 })).unwrap();
-    } catch (err: any) {
-      toast.error(err?.message || err || "Failed to delete user");
-    }
-  };
+  const handleArchive = async (id: string) => {
+  const ok = window.confirm("Are you sure you want to archive this user? They will no longer be able to log in.");
+  if (!ok) return;
+  try {
+    await dispatch(archiveUser(id)).unwrap();
+    toast.success("User archived");
+    await dispatch(fetchUsers({ page: currentPage, limit: 20 })).unwrap();
+  } catch (err: any) {
+    toast.error(err?.message || err || "Failed to archive user");
+  }
+};
 
   const filteredUsers = users.filter((user) => {
     const term = search.toLowerCase();
@@ -159,21 +157,11 @@ export default function UsersPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 text-left border-b border-gray-100">
-                <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">
-                  User
-                </th>
-                <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">
-                  Role
-                </th>
-                <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">
-                  Company
-                </th>
-                <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">
-                  Email
-                </th>
-                <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide text-right">
-                  Actions
-                </th>
+                <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">User</th>
+                <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Role</th>
+                <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Company</th>
+                <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Email</th>
+                <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide text-right">Actions</th>
               </tr>
             </thead>
 
@@ -194,65 +182,51 @@ export default function UsersPage() {
                 </tr>
               )}
 
-              {!loading &&
-                filteredUsers.map((user) => (
-                  <tr
-                    key={user.id}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    {/* User */}
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-3">
-                        <Avatar name={user.name ?? "?"} />
-                        <span className="font-medium text-gray-900">
-                          {user.name}
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* Role */}
-                    <td className="px-5 py-3.5">
-                      <RoleBadge role={user.role} />
-                    </td>
-
-                    {/* Company */}
-                    <td className="px-5 py-3.5 text-gray-600">
-                      {user.company?.name ?? (
-                        <span className="text-gray-400 italic">No company</span>
-                      )}
-                    </td>
-
-                    {/* Email */}
-                    <td className="px-5 py-3.5 text-gray-500">{user.email}</td>
-
-                    {/* Actions */}
-                    <td className="px-5 py-3.5 text-right">
-                      <div className="inline-flex items-center gap-1">
-                        <button
-                          onClick={() => {
-                            setEditingUser(user);
-                            setShowForm(true);
-                          }}
-                          className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-                          title="Edit user"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(user.id)}
-                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                          title="Delete user"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+              {!loading && filteredUsers.map((user) => (
+                <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-5 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <Avatar name={user.name ?? "?"} />
+                      <span className="font-medium text-gray-900">{user.name}</span>
+                    </div>
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <RoleBadge role={user.role} />
+                  </td>
+                  <td className="px-5 py-3.5 text-gray-600">
+                    {user.company?.name ?? (
+                      <span className="text-gray-400 italic">No company</span>
+                    )}
+                  </td>
+                  <td className="px-5 py-3.5 text-gray-500">{user.email}</td>
+                  <td className="px-5 py-3.5 text-right">
+                   <div className="inline-flex items-center gap-1">
+                          <button
+                            onClick={() => {
+                              setEditingUser(user);
+                              setShowForm(true);
+                            }}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                            title="Edit user"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          {user.id !== currentUser?.id && (
+                            <button
+                              onClick={() => handleArchive(user.id)}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                              title="Archive user"
+                            >
+                              <Archive className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
 
-          {/* Table footer with count */}
           {!loading && filteredUsers.length > 0 && (
             <div className="px-5 py-3 border-t border-gray-100 bg-gray-50">
               <p className="text-xs text-gray-400">
@@ -275,6 +249,7 @@ export default function UsersPage() {
         user={editingUser || undefined}
         companies={companies}
         isOpen={showForm}
+        currentUserId={currentUser?.id}
         onClose={() => {
           setShowForm(false);
           setEditingUser(null);

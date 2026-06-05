@@ -39,7 +39,7 @@ const Sidebar = () => {
       <nav className="flex-1 px-3 space-y-1">
 
         {/* ADMIN */}
-        {(role === "ADMIN" || role === "SUPER_ADMIN") && (
+        {role === "ADMIN"  && (
           <>
             <NavLink to="/admin/dashboard" className={navStyle}>
               <LayoutDashboard /> Dashboard

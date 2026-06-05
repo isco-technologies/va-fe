@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import Select from "react-select";
@@ -7,6 +8,7 @@ interface UserFormProps {
   user?: User;
   companies: Company[];
   isOpen: boolean;
+  currentUserId?: string;
   onClose: () => void;
   onSubmit: (data: {
     name: string;
@@ -17,7 +19,7 @@ interface UserFormProps {
 }
 
 const roleOptions = [
-  { value: "SUPER_ADMIN", label: "Super Admin" },
+  { value: "ADMIN", label: "Admin" },
   { value: "CLIENT", label: "Client" },
 ];
 
@@ -25,6 +27,7 @@ const UserForm: React.FC<UserFormProps> = ({
   user,
   companies = [],
   isOpen,
+  currentUserId,
   onClose,
   onSubmit,
 }) => {
@@ -40,9 +43,10 @@ const UserForm: React.FC<UserFormProps> = ({
     companyId: undefined,
   });
 
+  const isSelf = !!user && user.id === currentUserId;
+
   useEffect(() => {
     if (!isOpen) return;
-
     if (user) {
       setFormData({
         name: user.name || "",
@@ -60,26 +64,14 @@ const UserForm: React.FC<UserFormProps> = ({
     }
   }, [user, isOpen]);
 
-  useEffect(() => {
-    if (formData.role === "SUPER_ADMIN") {
-      setFormData((prev) => ({
-        ...prev,
-        companyId: undefined,
-      }));
-    }
-  }, [formData.role]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     const payload = {
       name: formData.name.trim(),
       email: formData.email.trim(),
       role: formData.role,
-      companyId:
-        formData.role === "SUPER_ADMIN" ? undefined : formData.companyId,
+      companyId: formData.role === "ADMIN" ? undefined : formData.companyId,
     };
-
     await onSubmit(payload);
     onClose();
   };
@@ -92,13 +84,12 @@ const UserForm: React.FC<UserFormProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-white rounded-xl p-8 w-full max-w-md shadow-lg">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold">
             {user ? "Edit User" : "Add User"}
           </h2>
-
           <button onClick={onClose} type="button">
             <X size={20} />
           </button>
@@ -138,16 +129,24 @@ const UserForm: React.FC<UserFormProps> = ({
             <Select
               options={roleOptions}
               value={roleOptions.find((r) => r.value === formData.role)}
-              onChange={(opt) =>
+              isDisabled={isSelf}
+              onChange={(opt) => {
+                const newRole = (opt?.value as UserRole) || "CLIENT";
                 setFormData({
                   ...formData,
-                  role: (opt?.value as UserRole) || "CLIENT",
-                })
-              }
+                  role: newRole,
+                  companyId: newRole === "ADMIN" ? undefined : formData.companyId,
+                });
+              }}
             />
+            {isSelf && (
+              <p className="text-xs text-gray-400 mt-1">
+                You cannot change your own role.
+              </p>
+            )}
           </div>
 
-          {formData.role !== "SUPER_ADMIN" && (
+          {formData.role !== "ADMIN" && (
             <div>
               <label className="form-label">Company</label>
               <Select
@@ -176,13 +175,11 @@ const UserForm: React.FC<UserFormProps> = ({
             >
               Cancel
             </button>
-
             <button
               type="submit"
               className="px-4 py-2 bg-indigo-600 text-white rounded-md"
             >
               {user ? "Update User" : "Create User"}
-
             </button>
           </div>
         </form>

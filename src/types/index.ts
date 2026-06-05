@@ -1,5 +1,5 @@
 export type UserRole =
-  | "SUPER_ADMIN"
+  | "ADMIN"
   | "CLIENT";
 
 export interface Company {

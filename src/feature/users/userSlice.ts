@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import apiClient from "../../api/Axios";
 import type { User } from "../../types";
@@ -54,11 +55,15 @@ export const updateUser = createAsyncThunk(
   }
 );
 
-export const deleteUser = createAsyncThunk(
-  "users/deleteUser",
-  async (id: string) => {
-    await apiClient.delete(`/users/${id}`);
-    return id;
+export const archiveUser = createAsyncThunk(
+  "users/archiveUser",
+  async (id: string, { rejectWithValue }) => {
+    try {
+      await apiClient.patch(`/users/${id}/archive`);
+      return id;
+    } catch (err: any) {
+      return rejectWithValue(err?.response?.data?.message || "Failed to archive user");
+    }
   }
 );
 
@@ -132,8 +137,8 @@ const userSlice = createSlice({
         }
       })
 
-      // DELETE USER
-      .addCase(deleteUser.fulfilled, (state, action) => {
+      // ARCHIVE USER
+      .addCase(archiveUser.fulfilled, (state, action) => {
         state.users = state.users.filter(
           (u) => u.id !== action.payload
         );

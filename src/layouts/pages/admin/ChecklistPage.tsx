@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, RefreshCw, ClipboardList, Archive, Layers } from "lucide-react";
@@ -35,18 +36,21 @@ export default function ChecklistPage() {
   }), [items]);
 
   // FILTER
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return items.filter((c) => {
-      const matchesSearch =
-        !q ||
-        (c.name?.toLowerCase() || "").includes(q) ||
-        String(c.description || "").toLowerCase().includes(q);
-      const matchesStatus =
-        statusFilter === "ALL" || c.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
-  }, [items, search, statusFilter]);
+  // FILTER
+const filtered = useMemo(() => {
+  const q = search.trim().toLowerCase();
+  return items.filter((c) => {
+    const matchesSearch =
+      !q ||
+      (c.name?.toLowerCase() || "").includes(q) ||
+      String(c.description || "").toLowerCase().includes(q);
+    const matchesStatus =
+      statusFilter === "ALL"
+        ? c.status !== "ARCHIVED"          
+        : c.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+}, [items, search, statusFilter]);
 
   const openCreate = () => {
     setEditing(null);
@@ -73,7 +77,7 @@ export default function ChecklistPage() {
         ).unwrap();
       } else {
         await dispatch(
-          addChecklist({ name: data.name, description: data.description, status: "INACTIVE" })
+          addChecklist({ name: data.name, description: data.description })
         ).unwrap();
       }
       dispatch(fetchChecklists());

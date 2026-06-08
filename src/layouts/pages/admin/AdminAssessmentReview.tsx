@@ -64,7 +64,6 @@ const template: { fields: Field[] } = {
       id: "affectedSystems",
       label: "Affected Systems",
       type: "text",
-      required: true,
     },
     {
       id: "description",
@@ -126,13 +125,6 @@ const template: { fields: Field[] } = {
 
 // STYLES
 
-const SEVERITY_STYLES: Record<string, { badge: string }> = {
-  CRITICAL: { badge: "bg-red-100 text-red-700 border-red-200" },
-  HIGH:     { badge: "bg-orange-100 text-orange-700 border-orange-200" },
-  MEDIUM:   { badge: "bg-amber-100 text-amber-700 border-amber-200" },
-  LOW:      { badge: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-};
-
 const ANSWER_STYLES: Record<string, string> = {
   YES: "bg-emerald-100 text-emerald-700 border border-emerald-200",
   NO:  "bg-red-100 text-red-700 border border-red-200",
@@ -146,19 +138,6 @@ const inputCls =
 
 const selectCls =
   "w-full bg-white border border-gray-200 text-gray-900 px-3 py-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-400 transition";
-
-// HELPER — read a field value from dynamicFields array
-
-const getDynField = (f: any, label: string) => {
-  let fields = f.dynamicFields;
-  if (typeof fields === "string") {
-    try { fields = JSON.parse(fields); } catch { fields = []; }
-  }
-  if (!Array.isArray(fields)) return "—";
-  return fields.find(
-    (e: any) => e.label?.toLowerCase() === label.toLowerCase()
-  )?.value ?? "—";
-};
 
 // PAGE
 
@@ -174,7 +153,6 @@ export default function AdminAssessmentReviewPage() {
   const [customFields, setCustomFields] = useState<Field[]>([]);
   const [showCustomModal, setShowCustomModal] = useState(false);
   const [showFieldSelector, setShowFieldSelector] = useState(false);
-  const [findings, setFindings] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -214,9 +192,6 @@ export default function AdminAssessmentReviewPage() {
         setAssessmentName(res.data.assessmentName || "");
         setCompanyName(res.data.companyName || "");
       }
-
-      const findingsRes = await apiClient.get(`/technical-findings/assessment/${assessmentId}`);
-      setFindings(findingsRes.data.data || []);
     } catch (err) {
       console.error("Failed to fetch review data:", err);
     } finally {
@@ -338,13 +313,12 @@ export default function AdminAssessmentReviewPage() {
 
       formData.append("dynamicFields", JSON.stringify(dynamicEntries));
 
-      const res = await apiClient.post("/technical-findings", formData, {
+      await apiClient.post("/technical-findings", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
       setValues({});
       setSubmitSuccess(true);
-      setFindings((prev) => [res.data.data, ...prev]);
       setTimeout(() => setSubmitSuccess(false), 3000);
     } catch (err: any) {
       setSubmitError(err.response?.data?.message || "Something went wrong.");
@@ -473,11 +447,9 @@ export default function AdminAssessmentReviewPage() {
               </div>
             </div>
 
-            {/* RIGHT — form + findings */}
+            {/* RIGHT — form only */}
 
-            <div className="xl:col-span-3 space-y-6">
-
-              {/* FORM */}
+            <div className="xl:col-span-3">
 
               <form
                 onSubmit={handleSubmit}
@@ -712,60 +684,6 @@ export default function AdminAssessmentReviewPage() {
                 </div>
               </form>
 
-              {/* FINDINGS TABLE */}
-
-              {findings.length > 0 && (
-                <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-                  <div className="px-6 py-4 border-b border-gray-100">
-                    <h3 className="font-semibold text-gray-900">Assessment Findings</h3>
-                    <p className="text-xs text-gray-400 mt-1">
-                      All findings documented for this assessment
-                    </p>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50 border-b border-gray-100">
-                        <tr>
-                          <th className="px-5 py-3 text-left text-gray-500 font-medium">Title</th>
-                          <th className="px-5 py-3 text-left text-gray-500 font-medium">Severity</th>
-                          <th className="px-5 py-3 text-left text-gray-500 font-medium">Affected Systems</th>
-                          <th className="px-5 py-3 text-left text-gray-500 font-medium">CVSS</th>
-                          <th className="px-5 py-3 text-left text-gray-500 font-medium">Category</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {findings.map((f: any) => {
-                          const sev = getDynField(f, "Severity");
-                          const sevStyle = SEVERITY_STYLES[sev] ?? { badge: "bg-gray-100 text-gray-400 border-gray-200" };
-
-                          return (
-                            <tr key={f.id} className="border-b border-gray-100 hover:bg-gray-50 transition">
-                              <td className="px-5 py-4 font-medium text-gray-800">
-                                {f.title}
-                              </td>
-                              <td className="px-5 py-4">
-                                <span className={`text-xs px-2 py-1 rounded-full border font-medium ${sevStyle.badge}`}>
-                                  {sev}
-                                </span>
-                              </td>
-                              <td className="px-5 py-4 text-gray-600">
-                                {getDynField(f, "Affected Systems")}
-                              </td>
-                              <td className="px-5 py-4 text-gray-600">
-                                {getDynField(f, "CVSS Score")}
-                              </td>
-                              <td className="px-5 py-4 text-gray-600">
-                                {getDynField(f, "Category")}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         )}

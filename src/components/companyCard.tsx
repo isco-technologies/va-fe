@@ -194,18 +194,12 @@ const CompanyCard = ({
 
               <p>
                 <strong>Email:</strong>{" "}
-                {company.email ||
-                  "N/A"}
-                {company.contactEmail &&
-                  ` (${company.contactEmail})`}
+                {company.contactEmail || "N/A"}
               </p>
 
               <p>
                 <strong>Phone:</strong>{" "}
-                {company.phone ||
-                  "N/A"}
-                {company.contactPhone &&
-                  ` (${company.contactPhone})`}
+                {company.contactPhone || "N/A"}
               </p>
 
               {company.address && (

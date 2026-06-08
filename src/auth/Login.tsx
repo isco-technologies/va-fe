@@ -280,7 +280,7 @@ const Login = () => {
               {/* Password */}
               <div>
                 <label style={labelStyle}>
-                  Password{"Password"}
+                  Password{""}
                 </label>
                 <div style={inputWrap}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8ca0be" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>

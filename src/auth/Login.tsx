@@ -82,15 +82,7 @@ const Login = () => {
           padding: "36px 48px",
         }}
       >
-        {/* ── Layer 1: the actual logo as a full-bleed background photo ── */}
-        <div style={{
-          position: "absolute", inset: 0,
-          backgroundImage: "url('/image.png')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-        }} />
-
+       
         {/* ── Layer 2: dark navy colour overlay — like the blue tint over the keys photo ── */}
         <div style={{
           position: "absolute", inset: 0,
@@ -135,7 +127,7 @@ const Login = () => {
                 ISCO Technologies
               </span>
               <span style={{ display: "block", fontSize: 14, fontWeight: 700 }}>
-                ISCO-TECH VULNERABILITY ASSESSMENT PLATFORM
+                 VULNERABILITY ASSESSMENT PLATFORM
               </span>
             </div>
           </div>

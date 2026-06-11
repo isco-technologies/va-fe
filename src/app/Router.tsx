@@ -23,61 +23,44 @@ import ArchivesPage from "../layouts/pages/admin/ArchivesPage";
 
 
 const router = createBrowserRouter([
-  //PUBLIC 
+  // PUBLIC 
   { path: "/", element: <LandingPage /> },
   { path: "/login", element: <Login /> },
   { path: "/set-password", element: <SetPasswordPage /> },
   { path: "/unauthorized", element: <div>Unauthorized</div> },
 
-  //  ADMIN 
+  // ADMIN 
   {
     path: "/admin",
     element: (
-      <ProtectedRoute
-        
-        allowedRoles={["ADMIN", "SUPER_ADMIN"]}
-      />
+      <ProtectedRoute allowedRoles={["ADMIN", "SUPER_ADMIN"]} />
     ),
     children: [
-      // 
       { index: true, element: <Navigate to="dashboard" replace /> },
-
       { path: "assessment", element: <AssessmentPage /> },
       { path: "companies", element: <CompanyPage /> },
       { path: "checklists", element: <ChecklistPage /> },
       { path: "archives", element: <ArchivesPage /> },
       { path: "reports", element: <AdminReportPage /> },
-      
       { path: "reports/edit/:assessmentId", element: <ReportListPage /> },
       { path: "reports/view/:findingId", element: <AssessmentReportPage /> },
-      {path: "dashboard", element: <AdminDashboard />}, 
-      
-      // DETAILS
-      {
-        path: "checklists/:checklistId/domains",
-        element: <ChecklistDomainPage />,
-      },
-      {
-        path: "assessments/:assessmentId/review",
-        element: <AdminAssessmentReviewPage />,
-      },
+      { path: "dashboard", element: <AdminDashboard /> },
+      { path: "checklists/:checklistId/domains", element: <ChecklistDomainPage /> },
+      { path: "assessments/:assessmentId/review", element: <AdminAssessmentReviewPage /> },
       { path: "users", element: <UsersPage /> },
     ],
   },
 
   // CLIENT 
   {
-    path: "/client",element: (<ProtectedRoute
-        allowedRoles={["CLIENT"]}
-      />
-    ),
+    path: "/client",
+    element: (<ProtectedRoute allowedRoles={["CLIENT"]} />),
     children: [
-      
       { index: true, element: <Navigate to="assessment" replace /> },
       { path: "assessment", element: <ClientAssessmentPage /> },
       { path: "assessment/:id", element: <ClientAssessmentPage /> },
       { path: "reports", element: <ClientReportsPage /> },
-      { path: "reports/:findingId", element: <ClientReportViewPage /> },
+      { path: "reports/:assessmentId", element: <ClientReportViewPage /> },
       { path: "consent", element: <ClientPolicyPage /> },
       { path: "dashboard", element: <ClientDashboard /> },
     ],
@@ -90,9 +73,7 @@ const router = createBrowserRouter([
       const state = useAuthStore.getState();
       const isAuthenticated = !!state.token;
       const role = state.user?.role;
-
       if (!isAuthenticated) return <Navigate to="/login" replace />;
-
       return role === "CLIENT"
         ? <Navigate to="/client/dashboard" replace />
         : <Navigate to="/admin/dashboard" replace />;

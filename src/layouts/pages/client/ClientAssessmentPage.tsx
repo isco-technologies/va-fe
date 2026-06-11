@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import AppLayout from "../../appLayout";
 import apiClient from "../../../api/Axios";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, ArrowLeft,Check } from "lucide-react";
 import { useParams } from "react-router-dom";
 
 type Assessment = {
@@ -12,574 +12,392 @@ type Assessment = {
   status: "PENDING" | "IN PROGRESS" | "COMPLETED";
   progress: number;
 };
+type Question = { id: string; text: string; answer?: string; remark?: string };
+type Control  = { id: string; code: string; title: string; questions: Question[] };
+type Domain   = { id: string; name: string; controls: Control[]; questions: Question[] };
 
-type Question = {
-  id: string;
-  text: string;
-  answer?: string;
-  remark?: string;
-};
-
-type Control = {
-  id: string;
-  code: string;
-  title: string;
-  questions: Question[];
-};
-
-type Domain = {
-  id: string;
-  name: string;
-  controls: Control[];
-  questions: Question[];
+const STATUS_CONFIG: Record<string, { label: string; cls: string; dot: string }> = {
+  COMPLETED:     { label: "Completed",   cls: "bg-emerald-50 text-emerald-700 border border-emerald-200", dot: "bg-emerald-500" },
+  "IN PROGRESS": { label: "In Progress", cls: "bg-indigo-50 text-indigo-700 border border-indigo-200",   dot: "bg-indigo-500" },
+  PENDING:       { label: "Pending",     cls: "bg-amber-50 text-amber-700 border border-amber-200",      dot: "bg-amber-400"  },
 };
 
 export default function ClientAssessmentPage() {
-  const {id} = useParams <{id: string}>();
-  const [activeTab, setActiveTab] = useState("all");
-  const [search, setSearch] = useState("");
-  const [assessments, setAssessments] = useState<Assessment[]>([]);
-  const [selectedAssessment, setSelectedAssessment] =
-    useState<Assessment | null>(null);
-  const [domains, setDomains] = useState<Domain[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const [openDomains, setOpenDomains] = useState<Record<string, boolean>>({});
+  const { id } = useParams<{ id: string }>();
+  const [activeTab, setActiveTab]       = useState("all");
+  const [search, setSearch]             = useState("");
+  const [assessments, setAssessments]   = useState<Assessment[]>([]);
+  const [selected, setSelected]         = useState<Assessment | null>(null);
+  const [domains, setDomains]           = useState<Domain[]>([]);
+  const [loading, setLoading]           = useState(false);
+  const [openDomains, setOpenDomains]   = useState<Record<string, boolean>>({});
   const [openControls, setOpenControls] = useState<Record<string, boolean>>({});
-
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage]   = useState(1);
   const itemsPerPage = 1;
 
   useEffect(() => {
-  fetchAssessments().then((list) => {
-    if (id && list.length > 0) {
-      const target = list.find((a: Assessment) => a.id === id);
-      if (target) openAssessment(target);
-    }
-  });
-}, [id]);
+    fetchAssessments().then((list) => {
+      if (id && list.length > 0) {
+        const target = list.find((a: Assessment) => a.id === id);
+        if (target) openAssessment(target);
+      }
+    });
+  }, [id]);
 
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [currentPage]);
+  useEffect(() => { window.scrollTo({ top: 0, behavior: "smooth" }); }, [currentPage]);
 
   const fetchAssessments = async (): Promise<Assessment[]> => {
-  try {
-    const res = await apiClient.get("/assessments/client");
-    const data = res.data;
-    const safeArray = Array.isArray(data) ? data
-      : Array.isArray(data.assessments) ? data.assessments
-      : Array.isArray(data.data) ? data.data : [];
-    setAssessments(safeArray);
-    return safeArray;
-  } catch (err) {
-    console.error(err);
-    setAssessments([]);
-    return [];
-  }
-};
+    try {
+      const res = await apiClient.get("/assessments/client");
+      const data = res.data;
+      const arr = Array.isArray(data) ? data
+        : Array.isArray(data.assessments) ? data.assessments
+        : Array.isArray(data.data) ? data.data : [];
+      setAssessments(arr);
+      return arr;
+    } catch { setAssessments([]); return []; }
+  };
+
   const openAssessment = async (assessment: Assessment) => {
     try {
       setLoading(true);
-      setSelectedAssessment(assessment);
-
+      setSelected(assessment);
       const [detailsRes, answersRes] = await Promise.all([
         apiClient.get(`/assessments/${assessment.id}/details`),
         apiClient.get(`/assessment-answers/${assessment.id}`),
       ]);
-
       const details = detailsRes.data;
       const answers = answersRes.data.data || [];
-
-      const safeDomains = Array.isArray(details)
-        ? details
-        : Array.isArray(details.domains)
-        ? details.domains
-        : [];
-
+      const safeDomains = Array.isArray(details) ? details : Array.isArray(details.domains) ? details.domains : [];
       const answerMap: Record<string, { answer: string; remark?: string }> = {};
-
       answers.forEach((a: any) => {
-        if (a.control) {
-          answerMap[`control-${a.control.id}`] = {
-            answer: a.answer,
-            remark: a.remark,
-          };
-        }
-        if (a.domain) {
-          answerMap[`domain-${a.domain.id}`] = {
-            answer: a.answer,
-            remark: a.remark,
-          };
-        }
+        if (a.control) answerMap[`control-${a.control.id}`] = { answer: a.answer, remark: a.remark };
+        if (a.domain)  answerMap[`domain-${a.domain.id}`]   = { answer: a.answer, remark: a.remark };
       });
-
-      const mappedDomains = safeDomains.map((domain: any) => {
-        const domainAnswer = answerMap[`domain-${domain.id}`];
-
-        return {
-          ...domain,
-          questions: domain.questions?.map((q: any) => ({
-            ...q,
-            answer: domainAnswer?.answer,
-            remark: domainAnswer?.remark,
-          })),
-          controls: domain.controls.map((control: any) => {
-            const controlAnswer = answerMap[`control-${control.id}`];
-
-            return {
-              ...control,
-              questions: control.questions.map((q: any) => ({
-                ...q,
-                answer: controlAnswer?.answer,
-                remark: controlAnswer?.remark,
-              })),
-            };
-          }),
-        };
-      });
-
-      setDomains(mappedDomains);
+      setDomains(safeDomains.map((domain: any) => ({
+        ...domain,
+        questions: domain.questions?.map((q: any) => ({ ...q, ...answerMap[`domain-${domain.id}`] })),
+        controls: domain.controls.map((control: any) => ({
+          ...control,
+          questions: control.questions.map((q: any) => ({ ...q, ...answerMap[`control-${control.id}`] })),
+        })),
+      })));
       setCurrentPage(1);
-    } catch (err) {
-      console.error(err);
-      setDomains([]);
-    } finally {
-      setLoading(false);
-    }
+    } catch { setDomains([]); }
+    finally { setLoading(false); }
   };
 
-  const handleAnswer = async (
-    questionId: string,
-    value: string,
-    remark?: string,
-    controlId?: string,
-    domainId?: string
-  ) => {
+  const handleAnswer = async (questionId: string, value: string, remark?: string, controlId?: string, domainId?: string) => {
     try {
       await apiClient.post("/assessment-answers", {
-        assessmentId: selectedAssessment?.id,
-        questionId,
-        answer: value,
-        remark,
-        controlId,
-        domainId,
+        assessmentId: selected?.id, questionId, answer: value, remark, controlId, domainId,
       });
-
-      setDomains((prev) =>
-        prev.map((d) => ({
-          ...d,
-          questions: d.questions?.map((q) =>
-            q.id === questionId
-              ? { ...q, answer: value, remark: remark ?? q.remark }
-              : q
-          ),
-          controls: d.controls.map((c) => ({
-            ...c,
-            questions: c.questions.map((q) =>
-              q.id === questionId
-                ? { ...q, answer: value, remark: remark ?? q.remark }
-                : q
-            ),
-          })),
-        }))
-      );
-
+      setDomains((prev) => prev.map((d) => ({
+        ...d,
+        questions: d.questions?.map((q) => q.id === questionId ? { ...q, answer: value, remark: remark ?? q.remark } : q),
+        controls: d.controls.map((c) => ({
+          ...c,
+          questions: c.questions.map((q) => q.id === questionId ? { ...q, answer: value, remark: remark ?? q.remark } : q),
+        })),
+      })));
       const refreshed = await apiClient.get("/assessments/client");
-      const refreshedData = refreshed.data;
-
-      const safeArray = Array.isArray(refreshedData)
-        ? refreshedData
-        : Array.isArray(refreshedData.assessments)
-        ? refreshedData.assessments
-        : Array.isArray(refreshedData.data)
-        ? refreshedData.data
-        : [];
-
-      setAssessments(safeArray);
-
-      const updatedSelected = safeArray.find(
-        (a: Assessment) => a.id === selectedAssessment?.id
-      );
-
-      if (updatedSelected) {
-        setSelectedAssessment(updatedSelected);
-      }
-    } catch (err) {
-      console.error(err);
-    }
+      const arr = Array.isArray(refreshed.data) ? refreshed.data : Array.isArray(refreshed.data.data) ? refreshed.data.data : [];
+      setAssessments(arr);
+      const updated = arr.find((a: Assessment) => a.id === selected?.id);
+      if (updated) setSelected(updated);
+    } catch { /* noop */ }
   };
 
-  const totalPages = Math.ceil(domains.length / itemsPerPage);
-
-  const paginatedDomains = domains.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const totalPages       = Math.ceil(domains.length / itemsPerPage);
+  const paginatedDomains = domains.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const filteredAssessments = assessments.filter((a) => {
-    const matchesSearch =
-      a.company?.name?.toLowerCase().includes(search.toLowerCase()) ||
-      a.checklist?.name?.toLowerCase().includes(search.toLowerCase());
-
-    const matchesTab =
-      activeTab === "all" ||
-      a.status.toLowerCase() === activeTab.toLowerCase();
-
-    return matchesSearch && matchesTab;
+    const matchSearch = a.company?.name?.toLowerCase().includes(search.toLowerCase()) || a.checklist?.name?.toLowerCase().includes(search.toLowerCase());
+    const matchTab = activeTab === "all" || a.status.toLowerCase() === activeTab.toLowerCase();
+    return matchSearch && matchTab;
   });
 
-  return (
-    <AppLayout>
-      <div className="p-6">
-        {selectedAssessment ? (
-          <div>
-            <button
-              onClick={() => setSelectedAssessment(null)}
-              className="px-3 py-1 rounded text-sm mb-4 bg-blue-500 text-white hover:bg-blue-600"
-            >
-              ← Back to assessments
-            </button>
+  // ─── DETAIL VIEW ──────────────────────────────────────────────────────────
+  if (selected) {
+    const cfg  = STATUS_CONFIG[selected.status] || STATUS_CONFIG.PENDING;
+    const prog = selected.progress || 0;
 
-            <div className="bg-white border border-slate-200 rounded-xl p-6 mb-6">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h1 className="text-xl font-semibold text-slate-800">
-                    {selectedAssessment.checklist?.name}
-                  </h1>
-                  <p className="text-sm text-slate-500 mt-1">
-                    {selectedAssessment.company?.name}
-                  </p>
-                </div>
+    return (
+      <AppLayout>
+        <div className="max-w-4xl mx-auto px-4 py-8 space-y-5">
 
-                <div className="min-w-[180px]">
-                  <p className="text-xs text-slate-500 mb-1">Progress</p>
-                  <div className="bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-orange-600 h-2 rounded-full"
-                      style={{ width: `${selectedAssessment.progress || 0}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1">
-                    {selectedAssessment.progress || 0}%
-                  </p>
-                </div>
+          <button onClick={() => setSelected(null)}
+            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition"
+          >
+            <ArrowLeft size={14} /> Back to assessments
+          </button>
+
+          {/* HEADER */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-mono text-gray-400 uppercase tracking-widest mb-1">Assessment</p>
+                <h1 className="text-xl font-bold text-gray-900">{selected.checklist?.name}</h1>
+                <p className="text-sm text-gray-400 mt-0.5">{selected.company?.name}</p>
+              </div>
+              <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold shrink-0 ${cfg.cls}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />{cfg.label}
+              </span>
+            </div>
+            <div className="mt-4">
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-xs text-gray-500">Progress</p>
+                <p className="text-xs font-bold text-gray-700">{prog}%</p>
+              </div>
+              <div className="bg-gray-100 rounded-full h-1.5">
+                <div className={`h-1.5 rounded-full transition-all duration-500 ${prog === 100 ? "bg-emerald-500" : "bg-indigo-500"}`}
+                  style={{ width: `${prog}%` }} />
               </div>
             </div>
+          </div>
 
-            {loading ? (
-              <p className="border-t p-4 rounded bg-gray-100">Loading...</p>
-            ) : (
-              <div className="mb-4 text-sm text-slate-500">
-                {paginatedDomains.map((domain, index) => (
-                  <div
-                    key={domain.id}
-                    className="bg-white border border-slate-200 rounded-xl shadow-sm mb-4"
+          {loading ? (
+            <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center shadow-sm">
+              <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-sm text-gray-400">Loading…</p>
+            </div>
+          ) : (
+            <>
+              {paginatedDomains.map((domain) => (
+                <div key={domain.id} className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+
+                  <button type="button"
+                    onClick={() => setOpenDomains((p) => ({ ...p, [domain.id]: !p[domain.id] }))}
+                    className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition group"
                   >
-                    <div
-                      className="flex justify-between items-center px-5 py-4 cursor-pointer"
-                      onClick={() =>
-                        setOpenDomains((prev) => ({
-                          ...prev,
-                          [domain.id]: !prev[domain.id],
-                        }))
-                      }
-                    >
-                      <div className="flex items-center gap-2">
-                        {openDomains[domain.id] ? (
-                          <ChevronDown size={18} />
-                        ) : (
-                          <ChevronRight size={18} />
-                        )}
-
-                        <div>
-                          <p className="text-sm text-slate-500">
-                            Domain {index + 1}
-                          </p>
-                          <p className="font-semibold text-slate-800">
-                            {domain.name}
-                          </p>
-                        </div>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition ${openDomains[domain.id] ? "bg-indigo-500" : "bg-gray-100 group-hover:bg-gray-200"}`}>
+                        {openDomains[domain.id]
+                          ? <ChevronDown size={13} className="text-white" />
+                          : <ChevronRight size={13} className="text-gray-500" />}
                       </div>
-
-                      <div className="text-sm text-slate-500">
-                        Controls: {domain.controls.length}
+                      <div className="text-left">
+                        <p className="text-[10px] text-gray-400 font-mono uppercase tracking-wider">Domain</p>
+                        <p className="font-semibold text-gray-900 text-sm">{domain.name}</p>
                       </div>
                     </div>
-
-                    {openDomains[domain.id] && (
-                      <div className="px-5 pb-4">
-                        {domain.questions?.length > 0 && (
-                          <div className="mb-4">
-                            <p className="text-xs text-slate-400 mb-2">
-                              Domain Questions
-                            </p>
-
-                            {domain.questions.map((q) => (
-                              <div
-                                key={q.id}
-                                className="border rounded-lg p-4 mb-3 bg-slate-50"
-                              >
-                                <p className="text-sm mb-2">{q.text}</p>
-
-                                <div className="flex gap-2 mb-2">
-                                  {["YES", "NO", "NA"].map((opt) => (
-                                    <button
-                                      key={opt}
-                                      onClick={() =>
-                                        handleAnswer(
-                                          q.id,
-                                          opt,
-                                          q.remark,
-                                          undefined,
-                                          domain.id
-                                        )
-                                      }
-                                      className={`px-3 py-1 rounded-md border text-sm ${
-                                        q.answer === opt
-                                          ? "bg-indigo-600 text-white border-indigo-600"
-                                          : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
-                                      }`}
-                                    >
-                                      {opt}
-                                    </button>
-                                  ))}
-                                </div>
-
-                                <input
-                                  value={q.remark || ""}
-                                  onChange={(e) => {
-                                    const remark = e.target.value;
-
-                                    setDomains((prev) =>
-                                      prev.map((d) => ({
-                                        ...d,
-                                        questions: d.questions?.map((qq) =>
-                                          qq.id === q.id
-                                            ? { ...qq, remark }
-                                            : qq
-                                        ),
-                                      }))
-                                    );
-                                  }}
-                                  onBlur={() =>
-                                    handleAnswer(
-                                      q.id,
-                                      q.answer || "",
-                                      q.remark,
-                                      undefined,
-                                      domain.id
-                                    )
-                                  }
-                                  placeholder="Optional remark..."
-                                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {domain.controls.map((control) => (
-                          <div
-                            key={control.id}
-                            className="border rounded-lg p-4 mb-3"
-                          >
-                            <div
-                              className="flex items-center justify-between cursor-pointer"
-                              onClick={() =>
-                                setOpenControls((prev) => ({
-                                  ...prev,
-                                  [control.id]: !prev[control.id],
-                                }))
-                              }
-                            >
-                              <div className="flex items-center gap-2">
-                                {openControls[control.id] ? (
-                                  <ChevronDown size={16} />
-                                ) : (
-                                  <ChevronRight size={16} />
-                                )}
-
-                                <p className="font-medium">
-                                  {control.code} - {control.title}
-                                </p>
-                              </div>
-                            </div>
-
-                            {openControls[control.id] && (
-                              <div className="mt-3">
-                                {control.questions.map((q) => (
-                                  <div
-                                    key={q.id}
-                                    className="border-t pt-3 mt-3"
-                                  >
-                                    <p className="text-sm mb-2">{q.text}</p>
-
-                                    <div className="flex gap-2 mb-2">
-                                      {["YES", "NO", "NA"].map((opt) => (
-                                        <button
-                                          key={opt}
-                                          onClick={() =>
-                                            handleAnswer(
-                                              q.id,
-                                              opt,
-                                              q.remark,
-                                              control.id
-                                            )
-                                          }
-                                          className={`px-3 py-1 rounded-md border text-sm ${
-                                            q.answer === opt
-                                              ? "bg-indigo-600 text-white border-indigo-600"
-                                              : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
-                                          }`}
-                                        >
-                                          {opt}
-                                        </button>
-                                      ))}
-                                    </div>
-
-                                    <input
-                                      value={q.remark || ""}
-                                      onChange={(e) => {
-                                        const remark = e.target.value;
-
-                                        setDomains((prev) =>
-                                          prev.map((d) => ({
-                                            ...d,
-                                            controls: d.controls.map((c) => ({
-                                              ...c,
-                                              questions: c.questions.map(
-                                                (qq) =>
-                                                  qq.id === q.id
-                                                    ? { ...qq, remark }
-                                                    : qq
-                                              ),
-                                            })),
-                                          }))
-                                        );
-                                      }}
-                                      onBlur={() =>
-                                        handleAnswer(
-                                          q.id,
-                                          q.answer || "",
-                                          q.remark,
-                                          control.id
-                                        )
-                                      }
-                                      placeholder="Optional remark..."
-                                      className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    />
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                {totalPages > 1 && (
-                  <div className="mt-8 flex justify-between items-center">
-                    <button
-                      onClick={() => setCurrentPage((p) => p - 1)}
-                      disabled={currentPage === 1}
-                      className="px-4 py-2 border rounded text-sm disabled:opacity-50"
-                    >
-                      ← Previous
-                    </button>
-
-                    <span className="text-sm text-gray-500">
-                      Page {currentPage} of {totalPages}
-                    </span>
-
-                    <button
-                      onClick={() => setCurrentPage((p) => p + 1)}
-                      disabled={currentPage === totalPages}
-                      className="px-4 py-2 border rounded text-sm disabled:opacity-50"
-                    >
-                      Next →
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div>
-            <div className="flex items-center justify-between mb-4 gap-4">
-              <input
-                type="text"
-                placeholder="Search..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full max-w-md px-3 py-2 border rounded-md"
-              />
-
-              <div className="flex gap-6 border-b whitespace-nowrap">
-                {["all", "PENDING", "IN PROGRESS", "COMPLETED"].map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`pb-2 capitalize ${
-                      activeTab === tab
-                        ? "border-b-2 border-blue-600 text-blue-600"
-                        : "text-gray-500"
-                    }`}
-                  >
-                    {tab.replace("_", " ")}
+                    <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{domain.controls.length} controls</span>
                   </button>
-                ))}
-              </div>
-            </div>
 
-            <div className="bg-white shadow rounded-lg overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-left">
-                  <tr>
-                    <th className="px-4 py-3">Company</th>
-                    <th className="px-4 py-3">Checklist</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Progress</th>
-                  </tr>
-                </thead>
+                  {openDomains[domain.id] && (
+                    <div className="border-t border-gray-100 px-6 py-4 space-y-3">
 
-                <tbody>
-                  {filteredAssessments.map((a) => (
-                    <tr
-                      key={a.id}
-                      onClick={() => openAssessment(a)}
-                      className="border-t hover:bg-gray-50 cursor-pointer"
-                    >
-                      <td className="px-4 py-3">{a.company?.name}</td>
-                      <td className="px-4 py-3">{a.checklist?.name}</td>
-                      <td className="px-4 py-3">{a.status}</td>
-                      <td className="px-4 py-3">
-                        <div className="bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-orange-600 h-2 rounded-full"
-                            style={{ width: `${a.progress || 0}%` }}
-                          />
+                      {domain.questions?.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Domain Questions</p>
+                          {domain.questions.map((q) => (
+                            <QuestionCard key={q.id} q={q}
+                              onAnswer={(val, remark) => handleAnswer(q.id, val, remark, undefined, domain.id)}
+                              onRemarkChange={(remark) => setDomains((prev) => prev.map((d) => ({
+                                ...d, questions: d.questions?.map((qq) => qq.id === q.id ? { ...qq, remark } : qq),
+                              })))}
+                            />
+                          ))}
                         </div>
-                        <span className="text-xs text-gray-500">
-                          {a.progress || 0}%
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      )}
 
-              {filteredAssessments.length === 0 && (
-                <div className="p-4 text-center text-gray-400">
-                  No assessments found
+                      {domain.controls.map((control) => (
+                        <div key={control.id} className="border border-gray-100 rounded-xl overflow-hidden">
+                          <button type="button"
+                            onClick={() => setOpenControls((p) => ({ ...p, [control.id]: !p[control.id] }))}
+                            className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition text-left"
+                          >
+                            <div className="flex items-center gap-2">
+                              {openControls[control.id]
+                                ? <ChevronDown size={13} className="text-gray-400" />
+                                : <ChevronRight size={13} className="text-gray-400" />}
+                              <span className="text-[10px] font-mono text-indigo-500 font-semibold">{control.code}</span>
+                              <span className="text-sm font-medium text-gray-800">{control.title}</span>
+                            </div>
+                            <span className="text-xs text-gray-400 shrink-0">{control.questions.length}Q</span>
+                          </button>
+
+                          {openControls[control.id] && (
+                            <div className="border-t border-gray-100 px-4 py-3 space-y-2 bg-gray-50/40">
+                              {control.questions.map((q) => (
+                                <QuestionCard key={q.id} q={q}
+                                  onAnswer={(val, remark) => handleAnswer(q.id, val, remark, control.id)}
+                                  onRemarkChange={(remark) => setDomains((prev) => prev.map((d) => ({
+                                    ...d, controls: d.controls.map((c) => ({
+                                      ...c, questions: c.questions.map((qq) => qq.id === q.id ? { ...qq, remark } : qq),
+                                    })),
+                                  })))}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {/* PAGINATION */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between bg-white border border-gray-200 rounded-2xl px-5 py-3 shadow-sm">
+                  <button onClick={() => setCurrentPage((p) => p - 1)} disabled={currentPage === 1}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 disabled:opacity-30 hover:bg-gray-50 transition"
+                  >
+                    <ArrowLeft size={13} /> Previous
+                  </button>
+                  <span className="text-sm text-gray-500">Domain {currentPage} of {totalPages}</span>
+                  <button onClick={() => setCurrentPage((p) => p + 1)} disabled={currentPage === totalPages}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 disabled:opacity-30 hover:bg-gray-50 transition"
+                  >
+                    Next <ChevronRight size={13} />
+                  </button>
                 </div>
               )}
-            </div>
+            </>
+          )}
+        </div>
+      </AppLayout>
+    );
+  }
+
+  // ─── LIST VIEW ────────────────────────────────────────────────────────────
+  return (
+    <AppLayout>
+      <div className="max-w-5xl mx-auto px-4 py-8 space-y-5">
+
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">My Assessments</h1>
+          <p className="text-sm text-gray-400 mt-1">Select an assessment below to begin or continue.</p>
+        </div>
+
+        {/* SEARCH + TABS */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <input type="text" placeholder="Search..." value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full max-w-xs px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+          />
+          <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
+            {[
+              { key: "all", label: "All" },
+              { key: "PENDING", label: "Pending" },
+              { key: "IN PROGRESS", label: "In Progress" },
+              { key: "COMPLETED", label: "Completed" },
+            ].map(({ key, label }) => (
+              <button key={key} onClick={() => setActiveTab(key)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                  activeTab === key ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <span className="text-xs text-gray-400 ml-auto">{filteredAssessments.length} assessment{filteredAssessments.length !== 1 ? "s" : ""}</span>
+        </div>
+
+        {/* TABLE */}
+        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100">
+                <th className="text-left px-6 py-3 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Company</th>
+                <th className="text-left px-6 py-3 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Checklist</th>
+                <th className="text-left px-6 py-3 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Status</th>
+                <th className="text-left px-6 py-3 text-[10px] font-semibold text-gray-400 uppercase tracking-wider w-48">Progress</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredAssessments.map((a, idx) => {
+                const cfg  = STATUS_CONFIG[a.status] || STATUS_CONFIG.PENDING;
+                const prog = a.progress || 0;
+                return (
+                  <tr key={a.id} onClick={() => openAssessment(a)}
+                    className={`cursor-pointer hover:bg-indigo-50/40 transition ${idx > 0 ? "border-t border-gray-100" : ""}`}
+                  >
+                    <td className="px-6 py-4 font-medium text-gray-900">{a.company?.name}</td>
+                    <td className="px-6 py-4 text-gray-600">{a.checklist?.name}</td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${cfg.cls}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />{cfg.label}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-gray-100 rounded-full h-1.5">
+                          <div className={`h-1.5 rounded-full ${prog === 100 ? "bg-emerald-500" : "bg-indigo-500"}`}
+                            style={{ width: `${prog}%` }} />
+                        </div>
+                        <span className="text-xs text-gray-500 w-8 text-right">{prog}%</span>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {filteredAssessments.length === 0 && (
+            <div className="px-6 py-12 text-center text-gray-400 text-sm">No assessments found.</div>
+          )}
+        </div>
+      </div>
+    </AppLayout>
+  );
+}
+
+// ─── QUESTION CARD ─────────────────────────────────────────────────────────────
+
+function QuestionCard({ q, onAnswer, onRemarkChange }: {
+  q: Question;
+  onAnswer: (val: string, remark?: string) => void;
+  onRemarkChange: (remark: string) => void;
+}) {
+  const [saved, setSaved] = useState(false);
+
+  const submitRemark = () => {
+    if (!q.remark?.trim()) return;
+    onAnswer(q.answer || "", q.remark);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const ANSWER_STYLES: Record<string, string> = {
+    YES: "bg-emerald-500 border-emerald-500 text-white",
+    NO:  "bg-red-500 border-red-500 text-white",
+    NA:  "bg-gray-400 border-gray-400 text-white",
+  };
+
+  return (
+    <div className="bg-white border border-gray-100 rounded-xl p-4 space-y-3">
+      <p className="text-sm text-gray-700 leading-relaxed">{q.text}</p>
+      <div className="flex gap-2">
+        {["YES", "NO", "NA"].map((opt) => (
+          <button key={opt} type="button" onClick={() => onAnswer(opt, q.remark)}
+            className={`px-4 py-1.5 rounded-lg border text-xs font-semibold transition ${
+              q.answer === opt
+                ? ANSWER_STYLES[opt]
+                : "bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+            }`}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+      <div className="relative">
+        <input
+          value={q.remark || ""}
+          placeholder="Add a remark and press Enter…"
+          onChange={(e) => onRemarkChange(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); submitRemark(); } }}
+          onBlur={submitRemark}
+          className="w-full px-3 py-2 pr-10 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-400 transition bg-gray-50 focus:bg-white"
+        />
+        {saved && (
+          <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1 text-emerald-600">
+            <Check size={13} />
           </div>
         )}
       </div>
-    </AppLayout>
+    </div>
   );
 }

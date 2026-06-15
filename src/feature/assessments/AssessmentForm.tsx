@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useParams } from "react-router-dom";
 import AppLayout from "../../layouts/appLayout";
 import { useEffect, type JSXElementConstructor, type Key, type ReactElement, type ReactNode, type ReactPortal } from "react";
 import { useAppDispatch } from "../../feature/hooks/useAppDispatch";
 import { useAppSelector } from "../../feature/hooks/useAppSelector";
-import { fetchAssessments } from "../../feature/assessments/assessmentSlice";
+import { fetchAssessmentDetails } from "../../feature/assessments/assessmentSlice";
 
 
 
@@ -12,11 +13,11 @@ const AssessmentForm = () => {
   const dispatch = useAppDispatch();
 
   const { assessment, domains, isLoading } = useAppSelector(
-    (state) => state.assessments.details
+    (state) => state.assessments
   );
 
   useEffect(() => {
-    dispatch(fetchAssessments(id!));
+    dispatch(fetchAssessmentDetails(id!));
   }, [dispatch, id]);
 
   if (isLoading) return <div className="p-6">Loading...</div>;

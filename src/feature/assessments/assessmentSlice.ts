@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import {fetchAssessmentsAPI,createAssessmentAPI,} from "../../api/Assessment.api";
+import {fetchAssessmentsAPI,createAssessmentAPI,fetchAssessmentDetailsAPI,} from "../../api/Assessment.api";
 
 export type AssessmentStatus =
 
@@ -28,8 +29,17 @@ export interface Assessment {
   createdAt: string;
 }
 
+interface AssessmentDetails {
+  id: string;
+  company: { id: string; name: string };
+  checklist: { id: string; name: string };
+  domains: any[];
+}
+
 interface AssessmentState {
   details: unknown;
+  assessment: AssessmentDetails | null;
+  domains: any[];
   assessments: Assessment[];
   isLoading: boolean;
   error: string | null;
@@ -37,6 +47,8 @@ interface AssessmentState {
 
 const initialState: AssessmentState = {
   assessments: [],
+  assessment: null,
+  domains: [],
   isLoading: false,
   error: null,
   details: undefined
@@ -52,6 +64,20 @@ export const fetchAssessments = createAsyncThunk<
   } catch (err: unknown) {
     return rejectWithValue(
       (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Failed to fetch assessments"
+    );
+  }
+});
+
+export const fetchAssessmentDetails = createAsyncThunk<
+  AssessmentDetails,
+  string,
+  { rejectValue: string }
+>("assessments/fetchDetails", async (id, { rejectWithValue }) => {
+  try {
+    return await fetchAssessmentDetailsAPI(id);
+  } catch (err: unknown) {
+    return rejectWithValue(
+      (err as { response?: { data?: { message?: string } } })?.response?.data?.message || "Failed to fetch assessment details"
     );
   }
 });
@@ -87,6 +113,19 @@ const assessmentSlice = createSlice({
       .addCase(fetchAssessments.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload ?? "Error fetching assessments";
+      })
+      .addCase(fetchAssessmentDetails.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchAssessmentDetails.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.assessment = action.payload;
+        state.domains = action.payload.domains;
+      })
+      .addCase(fetchAssessmentDetails.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload ?? "Error fetching assessment details";
       })
       .addCase(createAssessment.fulfilled, (state, action) => {
         state.assessments.unshift(action.payload);

@@ -193,16 +193,24 @@ export default function ClientReportViewPage() {
         }
       });
 
+      // Prevent page breaks inside finding cards
+      const cards = reportRef.current.querySelectorAll(".finding-enter, .bg-white.border");
+      cards.forEach((el) => { (el as HTMLElement).style.pageBreakInside = "avoid"; });
+
       await html2pdf()
         .set({
-          margin:     [10, 10, 10, 10],
-          filename:   `${assessmentName || "report"}.pdf`,
-          image:      { type: "jpeg", quality: 0.98 },
+          margin:      [10, 10, 10, 10],
+          filename:    `${assessmentName || "report"}.pdf`,
+          image:       { type: "jpeg", quality: 0.98 },
           html2canvas: { scale: 2, useCORS: true, logging: false },
-          jsPDF:      { unit: "mm", format: "a4", orientation: "portrait" },
-        })
+          jsPDF:       { unit: "mm", format: "a4", orientation: "portrait" },
+          pagebreak:   { mode: ["avoid-all", "css", "legacy"] },
+        } as any)
         .from(reportRef.current)
         .save();
+
+      // Restore page break styles
+      cards.forEach((el) => { (el as HTMLElement).style.pageBreakInside = ""; });
 
       // Restore original styles
       origStyles.forEach(({ el }) => {

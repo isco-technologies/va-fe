@@ -22,6 +22,9 @@ const STATUS_CONFIG: Record<string, { label: string; cls: string; dot: string }>
   PENDING:       { label: "Pending",     cls: "bg-amber-50 text-amber-700 border border-amber-200",      dot: "bg-amber-400"  },
 };
 
+// Backend enum uses underscores (e.g. "IN_PROGRESS"); normalize to match STATUS_CONFIG keys/tabs
+const normalizeStatus = (status: string) => status.replace(/_/g, " ");
+
 export default function ClientAssessmentPage() {
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab]       = useState("all");
@@ -113,13 +116,13 @@ export default function ClientAssessmentPage() {
 
   const filteredAssessments = assessments.filter((a) => {
     const matchSearch = a.company?.name?.toLowerCase().includes(search.toLowerCase()) || a.checklist?.name?.toLowerCase().includes(search.toLowerCase());
-    const matchTab = activeTab === "all" || a.status.toLowerCase() === activeTab.toLowerCase();
+    const matchTab = activeTab === "all" || normalizeStatus(a.status).toLowerCase() === activeTab.toLowerCase();
     return matchSearch && matchTab;
   });
 
   // ─── DETAIL VIEW ──────────────────────────────────────────────────────────
   if (selected) {
-    const cfg  = STATUS_CONFIG[selected.status] || STATUS_CONFIG.PENDING;
+    const cfg  = STATUS_CONFIG[normalizeStatus(selected.status)] || STATUS_CONFIG.PENDING;
     const prog = selected.progress || 0;
 
     return (
@@ -309,7 +312,7 @@ export default function ClientAssessmentPage() {
             </thead>
             <tbody>
               {filteredAssessments.map((a, idx) => {
-                const cfg  = STATUS_CONFIG[a.status] || STATUS_CONFIG.PENDING;
+                const cfg  = STATUS_CONFIG[normalizeStatus(a.status)] || STATUS_CONFIG.PENDING;
                 const prog = a.progress || 0;
                 return (
                   <tr key={a.id} onClick={() => openAssessment(a)}

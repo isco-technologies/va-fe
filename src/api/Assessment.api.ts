@@ -21,3 +21,8 @@ export const updateAssessmentStatusAPI = async (
   const res = await axios.patch(`/assessments/${id}/status`, { status });
   return res.data;
 };
+
+export const fetchAssessmentDetailsAPI = async (id: string) => {
+  const res = await axios.get(`/assessments/${id}/details`);
+  return res.data;
+};

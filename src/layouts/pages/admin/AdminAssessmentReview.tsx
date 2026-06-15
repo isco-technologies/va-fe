@@ -496,11 +496,11 @@ function SingleQuestionCarousel({ questions }: { questions: Question[] }) {
     return <div className="text-sm text-gray-400">No client questions found for this domain.</div>;
   }
 
-  const question = questions[index];
+  const safeIndex = Math.min(index, questions.length - 1);
+  const question = questions[safeIndex];
   const answerStyle = question.answer
     ? ANSWER_STYLES[question.answer] || ANSWER_STYLES.NA
     : "bg-gray-100 text-gray-400 border border-gray-200";
-
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">

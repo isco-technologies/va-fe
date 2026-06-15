@@ -9,7 +9,16 @@ import {fetchAssessments,createAssessment,} from "../../../feature/assessments/a
 import { fetchCompanies } from "../../../feature/company/companySlice";
 import { fetchChecklists } from "../../../feature/checklists/checklistSlice";
 
-const ITEMS_PER_PAGE = 15;
+const ITEMS_PER_PAGE = 5;
+
+const STATUS_CONFIG: Record<string, { label: string; cls: string; dot: string }> = {
+  COMPLETED:    { label: "Completed",   cls: "bg-emerald-50 text-emerald-700 border border-emerald-200", dot: "bg-emerald-500" },
+  IN_PROGRESS:  { label: "In Progress", cls: "bg-indigo-50 text-indigo-700 border border-indigo-200",    dot: "bg-indigo-500" },
+  PENDING:      { label: "Pending",     cls: "bg-amber-50 text-amber-700 border border-amber-200",       dot: "bg-amber-400"  },
+};
+
+const getStatusConfig = (status: string) =>
+  STATUS_CONFIG[status?.replace(" ", "_")] || STATUS_CONFIG.PENDING;
 
 const Assessments = () => {
   const dispatch = useAppDispatch();
@@ -114,15 +123,6 @@ const Assessments = () => {
     { key: "COMPLETED", label: "Completed", count: assessments.filter((a: any) => a.status === "COMPLETED").length },
   ];
 
-  const statusStyle = (status: string) => {
-    switch (status) {
-      case "PENDING": return "bg-gray-100 text-gray-700";
-      case "COMPLETED": return "bg-green-100 text-green-700";
-      case "IN_PROGRESS": return "bg-yellow-100 text-yellow-700";
-      default: return "bg-gray-100 text-gray-700";
-    }
-  };
-
   // Page number buttons with ellipsis
   const getPageNumbers = () => {
     if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -160,41 +160,60 @@ const Assessments = () => {
 
         {/* CARDS */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-3xl border border-gray-200 p-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-gray-500 text-sm">Total Assessments</p>
-                <h2 className="text-4xl font-bold mt-3">{totalAssessments}</h2>
-              </div>
-              <Clipboard className="w-10 h-10 text-indigo-600" />
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <div className="flex items-center justify-between text-sm text-gray-500">
+              <span className="flex items-center gap-1.5">
+                <Clipboard className="w-4 h-4 text-indigo-500" />
+                Total Assessments
+              </span>
             </div>
+            <h2 className="text-3xl font-bold text-gray-900 mt-2">{totalAssessments}</h2>
+            <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              {completedReports} completed
+            </p>
           </div>
-          <div className="bg-white rounded-3xl border border-gray-200 p-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-gray-500 text-sm">Critical Findings</p>
-                <h2 className="text-4xl font-bold text-red-600 mt-3">{totalCritical}</h2>
-              </div>
-              <ShieldAlert className="w-10 h-10 text-red-600" />
+
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <div className="flex items-center justify-between text-sm text-gray-500">
+              <span className="flex items-center gap-1.5">
+                <ShieldAlert className="w-4 h-4 text-red-500" />
+                Critical Findings
+              </span>
             </div>
+            <h2 className="text-3xl font-bold text-gray-900 mt-2">{totalCritical}</h2>
+            <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+              {totalCritical} critical
+            </p>
           </div>
-          <div className="bg-white rounded-3xl border border-gray-200 p-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-gray-500 text-sm">High Findings</p>
-                <h2 className="text-4xl font-bold text-orange-500 mt-3">{totalHigh}</h2>
-              </div>
-              <AlertTriangle className="w-10 h-10 text-orange-500" />
+
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <div className="flex items-center justify-between text-sm text-gray-500">
+              <span className="flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 text-orange-500" />
+                High Findings
+              </span>
             </div>
+            <h2 className="text-3xl font-bold text-gray-900 mt-2">{totalHigh}</h2>
+            <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-400" />
+              {totalHigh} high severity
+            </p>
           </div>
-          <div className="bg-white rounded-3xl border border-gray-200 p-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-gray-500 text-sm">Completed Reports</p>
-                <h2 className="text-4xl font-bold text-green-600 mt-3">{completedReports}</h2>
-              </div>
-              <CheckCircle2 className="w-10 h-10 text-green-600" />
+
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <div className="flex items-center justify-between text-sm text-gray-500">
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                Completed Reports
+              </span>
             </div>
+            <h2 className="text-3xl font-bold text-gray-900 mt-2">{completedReports}</h2>
+            <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+              {totalAssessments - completedReports} in progress
+            </p>
           </div>
         </div>
 
@@ -242,13 +261,14 @@ const Assessments = () => {
               </tr>
             </thead>
             <tbody>
-              {paginated.map((a: any) => {
+              {paginated.map((a: any, idx: number) => {
                 const stats = calculateStats(a);
+                const cfg = getStatusConfig(a.status);
                 return (
                   <tr
                     key={a.id}
                     onClick={() => navigate(`/admin/assessments/${a.id}/review`)}
-                    className="border-b hover:bg-gray-50 cursor-pointer transition"
+                    className={`hover:bg-gray-50 cursor-pointer transition ${idx > 0 ? "border-t border-gray-100" : ""}`}
                   >
                     <td className="px-5 py-5 font-semibold text-gray-800">{a.company?.name || "—"}</td>
                     <td className="px-5 py-5 text-gray-700">{a.checklist?.name || "—"}</td>
@@ -260,18 +280,19 @@ const Assessments = () => {
                       <span className="bg-orange-100 text-orange-700 text-xs px-3 py-1 rounded-full font-medium">{stats.high}</span>
                     </td>
                     <td className="px-5 py-5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-28 h-2 bg-gray-200 rounded-full overflow-hidden">
-                          <div className="h-full bg-indigo-600 rounded-full" style={{ width: `${stats.progress}%` }} />
+                      <div className="flex items-center gap-2 w-40">
+                        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${stats.progress >= 100 ? "bg-emerald-500" : "bg-indigo-500"}`}
+                            style={{ width: `${stats.progress}%` }}
+                          />
                         </div>
-                        <span className="bg-green-100 text-green-700 text-xs font-medium px-3 py-1 rounded-full">
-                          {stats.progress}%
-                        </span>
+                        <span className="text-xs text-gray-500 w-9 text-right">{stats.progress}%</span>
                       </div>
                     </td>
                     <td className="px-5 py-5">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusStyle(a.status)}`}>
-                        {a.status?.replaceAll("_", " ")}
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${cfg.cls}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />{cfg.label}
                       </span>
                     </td>
                   </tr>

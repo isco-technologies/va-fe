@@ -296,8 +296,24 @@ const Login = () => {
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+                
+                {/* Forgot password link */}
+              <div 
+              style={{ textAlign: "right", marginTop: 2 }}>
+                <button
+                  type="button"
+                  onClick={() => navigate("/forgot-password")}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer",
+                    padding: 0, fontFamily: "'Manrope', sans-serif",
+                    fontSize: 13, color: "#3a5a9b", fontWeight: 600,
+                  }}
+                >
+                  Forgot password?
+                </button>
+               </div>
               </div>
-
+              
               {/* Submit */}
               <button
                 type="submit"

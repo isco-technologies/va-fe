@@ -20,6 +20,8 @@ import ClientReportViewPage from "../layouts/pages/client/ClientReportViewPage";
 import ClientPolicyPage from "../layouts/pages/client/ClientPolicyPage";
 import ClientDashboard from "../layouts/pages/client/ClientDashboard";
 import ArchivesPage from "../layouts/pages/admin/ArchivesPage";
+import ForgotPasswordPage from "../auth/ForgotPassword";
+import ResetPasswordPage from "../auth/ResetPassword";
 
 
 const router = createBrowserRouter([
@@ -27,6 +29,8 @@ const router = createBrowserRouter([
   { path: "/", element: <LandingPage /> },
   { path: "/login", element: <Login /> },
   { path: "/set-password", element: <SetPasswordPage /> },
+  { path: "/forgot-password", element: <ForgotPasswordPage /> },
+  { path: "/reset-password", element: <ResetPasswordPage /> },
   { path: "/unauthorized", element: <div>Unauthorized</div> },
 
   // ADMIN 

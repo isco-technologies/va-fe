@@ -208,7 +208,6 @@ export default function ClientReportViewPage() {
         } as any)
         .from(reportRef.current)
         .save();
-
       // Restore page break styles
       cards.forEach((el) => { (el as HTMLElement).style.pageBreakInside = ""; });
 
@@ -297,7 +296,6 @@ export default function ClientReportViewPage() {
                 </div>
                 <div className="mt-8 grid grid-cols-2 gap-x-10 gap-y-4 text-sm">
                   <div><SectionLabel>Client</SectionLabel><p className="text-[#111827] font-medium">{companyName || "—"}</p></div>
-                  <div><SectionLabel>Assessment</SectionLabel><p className="text-[#111827] font-medium">{assessmentName || "—"}</p></div>
                   <div><SectionLabel>Prepared by</SectionLabel><p className="text-[#111827] font-medium">ISCO Security</p></div>
                   <div><SectionLabel>Classification</SectionLabel><p className="text-[#111827] font-medium">Restricted</p></div>
                 </div>

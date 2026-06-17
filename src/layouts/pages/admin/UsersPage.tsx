@@ -60,7 +60,7 @@ export default function UsersPage() {
     limit: 20,
   };
 
-  const companiesState = useAppSelector((state) => state.companies);
+  const companiesState = useAppSelector((state) => state.companies) as any;
   const companies = companiesState?.companies ?? [];
 
   const [showForm, setShowForm] = useState(false);

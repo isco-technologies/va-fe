@@ -11,6 +11,7 @@ import { fetchUsers, addUser, updateUser, archiveUser } from "../../../feature/u
 import { fetchCompanies } from "../../../feature/company/companySlice";
 import type { User as UserType, UserRole } from "../../../types";
 import { useAuthStore } from "../../../feature/store/authStore";
+import axiosInstance from "../../../api/Axios";
 
 // HELPERS
 const ROLE_STYLES: Record<string, string> = {
@@ -67,6 +68,7 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<UserType | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
   useEffect(() => {
     dispatch(fetchUsers({ page: currentPage, limit: 20 }));
@@ -96,16 +98,28 @@ export default function UsersPage() {
   };
 
   const handleArchive = async (id: string) => {
-  const ok = window.confirm("Are you sure you want to archive this user? They will no longer be able to log in.");
-  if (!ok) return;
-  try {
-    await dispatch(archiveUser(id)).unwrap();
-    toast.success("User archived");
-    await dispatch(fetchUsers({ page: currentPage, limit: 20 })).unwrap();
-  } catch (err: any) {
-    toast.error(err?.message || err || "Failed to archive user");
-  }
-};
+    const ok = window.confirm("Are you sure you want to archive this user? They will no longer be able to log in.");
+    if (!ok) return;
+    try {
+      await dispatch(archiveUser(id)).unwrap();
+      toast.success("User archived");
+      await dispatch(fetchUsers({ page: currentPage, limit: 20 })).unwrap();
+    } catch (err: any) {
+      toast.error(err?.message || err || "Failed to archive user");
+    }
+  };
+
+  const handleResendSetupEmail = async (id: string) => {
+    setResendingId(id);
+    try {
+      await axiosInstance.post(`/users/${id}/resend-setup-email`);
+      toast.success("Setup email resent");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to resend email");
+    } finally {
+      setResendingId(null);
+    }
+  };
 
   const filteredUsers = users.filter((user) => {
     const term = search.toLowerCase();
@@ -200,27 +214,37 @@ export default function UsersPage() {
                   </td>
                   <td className="px-5 py-3.5 text-gray-500">{user.email}</td>
                   <td className="px-5 py-3.5 text-right">
-                   <div className="inline-flex items-center gap-1">
-                          <button
-                            onClick={() => {
-                              setEditingUser(user);
-                              setShowForm(true);
-                            }}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-                            title="Edit user"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                          {user.id !== currentUser?.id && (
-                            <button
-                              onClick={() => handleArchive(user.id)}
-                              className="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
-                              title="Archive user"
-                            >
-                              <Archive className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
+                    <div className="inline-flex items-center gap-1.5">
+                      {!user.password && user.role !== "ADMIN" && (
+                        <button
+                          onClick={() => handleResendSetupEmail(user.id)}
+                          disabled={resendingId === user.id}
+                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-600 border border-amber-200 hover:bg-amber-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          title="Resend setup email"
+                        >
+                          {resendingId === user.id ? "Sending…" : "Resend invite"}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          setEditingUser(user);
+                          setShowForm(true);
+                        }}
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                        title="Edit user"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      {user.id !== currentUser?.id && (
+                        <button
+                          onClick={() => handleArchive(user.id)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                          title="Archive user"
+                        >
+                          <Archive className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

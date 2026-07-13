@@ -72,17 +72,20 @@ export default function ClientAssessmentPage() {
       const details = detailsRes.data;
       const answers = answersRes.data.data || [];
       const safeDomains = Array.isArray(details) ? details : Array.isArray(details.domains) ? details.domains : [];
+
+      // Answers are now keyed per-question (a.question.id), not per-control/domain
       const answerMap: Record<string, { answer: string; remark?: string }> = {};
       answers.forEach((a: any) => {
-        if (a.control) answerMap[`control-${a.control.id}`] = { answer: a.answer, remark: a.remark };
-        if (a.domain)  answerMap[`domain-${a.domain.id}`]   = { answer: a.answer, remark: a.remark };
+        const qId = a.question?.id ?? a.questionId;
+        if (qId) answerMap[qId] = { answer: a.answer, remark: a.remark };
       });
+
       setDomains(safeDomains.map((domain: any) => ({
         ...domain,
-        questions: domain.questions?.map((q: any) => ({ ...q, ...answerMap[`domain-${domain.id}`] })),
+        questions: domain.questions?.map((q: any) => ({ ...q, ...answerMap[q.id] })),
         controls: domain.controls.map((control: any) => ({
           ...control,
-          questions: control.questions.map((q: any) => ({ ...q, ...answerMap[`control-${control.id}`] })),
+          questions: control.questions.map((q: any) => ({ ...q, ...answerMap[q.id] })),
         })),
       })));
       setCurrentPage(1);
@@ -90,10 +93,10 @@ export default function ClientAssessmentPage() {
     finally { setLoading(false); }
   };
 
-  const handleAnswer = async (questionId: string, value: string, remark?: string, controlId?: string, domainId?: string) => {
+  const handleAnswer = async (questionId: string, value: string, remark?: string) => {
     try {
       await apiClient.post("/assessment-answers", {
-        assessmentId: selected?.id, questionId, answer: value, remark, controlId, domainId,
+        assessmentId: selected?.id, questionId, answer: value, remark,
       });
       setDomains((prev) => prev.map((d) => ({
         ...d,
@@ -154,7 +157,7 @@ export default function ClientAssessmentPage() {
               </div>
               <div className="bg-gray-100 rounded-full h-1.5">
                 <div className={`h-1.5 rounded-full transition-all duration-500 ${prog === 100 ? "bg-emerald-500" : "bg-indigo-500"}`}
-                  style={{ width: `${prog}%` }} />
+                  style={{ width: `${Math.min(prog, 100)}%` }} />
               </div>
             </div>
           </div>
@@ -195,7 +198,7 @@ export default function ClientAssessmentPage() {
                           <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Domain Questions</p>
                           {domain.questions.map((q) => (
                             <QuestionCard key={q.id} q={q}
-                              onAnswer={(val, remark) => handleAnswer(q.id, val, remark, undefined, domain.id)}
+                              onAnswer={(val, remark) => handleAnswer(q.id, val, remark)}
                               onRemarkChange={(remark) => setDomains((prev) => prev.map((d) => ({
                                 ...d, questions: d.questions?.map((qq) => qq.id === q.id ? { ...qq, remark } : qq),
                               })))}
@@ -224,7 +227,7 @@ export default function ClientAssessmentPage() {
                             <div className="border-t border-gray-100 px-4 py-3 space-y-2 bg-gray-50/40">
                               {control.questions.map((q) => (
                                 <QuestionCard key={q.id} q={q}
-                                  onAnswer={(val, remark) => handleAnswer(q.id, val, remark, control.id)}
+                                  onAnswer={(val, remark) => handleAnswer(q.id, val, remark)}
                                   onRemarkChange={(remark) => setDomains((prev) => prev.map((d) => ({
                                     ...d, controls: d.controls.map((c) => ({
                                       ...c, questions: c.questions.map((qq) => qq.id === q.id ? { ...qq, remark } : qq),
@@ -329,7 +332,7 @@ export default function ClientAssessmentPage() {
                       <div className="flex items-center gap-2">
                         <div className="flex-1 bg-gray-100 rounded-full h-1.5">
                           <div className={`h-1.5 rounded-full ${prog === 100 ? "bg-emerald-500" : "bg-indigo-500"}`}
-                            style={{ width: `${prog}%` }} />
+                            style={{ width: `${Math.min(prog, 100)}%` }} />
                         </div>
                         <span className="text-xs text-gray-500 w-8 text-right">{prog}%</span>
                       </div>

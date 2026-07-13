@@ -70,19 +70,17 @@ const Assessments = () => {
     }
   };
 
-  // STATS
+  // STATS — critical/high/medium/low/findingsCount now come pre-computed
+  // from the backend (AssessmentService.getAll), since severity actually
+  // lives inside each finding's dynamicFields, not the raw finding.severity
+  // column (which is always null and can't be used here).
   const calculateStats = (assessment: any) => {
-    const findings = assessment.findings || [];
-    const critical = findings.filter((f: any) => f.severity === "CRITICAL").length;
-    const high = findings.filter((f: any) => f.severity === "HIGH").length;
-    const medium = findings.filter((f: any) => f.severity === "MEDIUM").length;
-    const low = findings.filter((f: any) => f.severity === "LOW").length;
     return {
-      total: findings.length,
-      critical,
-      high,
-      medium,
-      low,
+      total: assessment.findingsCount ?? (assessment.findings?.length || 0),
+      critical: assessment.critical || 0,
+      high: assessment.high || 0,
+      medium: assessment.medium || 0,
+      low: assessment.low || 0,
       progress: assessment.progress || 0,
     };
   };

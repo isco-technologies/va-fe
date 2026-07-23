@@ -76,14 +76,20 @@ export default function ChecklistDomainPage() {
         apiClient.get(`/checklists/${checklistId}/domains`),
       ]);
       setChecklist(cRes.data);
-      setDomains(dRes.data);
+
+      // ← ADD THIS: sort ascending by creation time so domain #1 always stays #1
+      const sorted = [...dRes.data].sort(
+        (a: Domain, b: Domain) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+      setDomains(sorted);   // ← was: setDomains(dRes.data);
+
     } catch (err: any) {
       console.error("Fetch error:", err?.response?.data || err);
     } finally {
       setLoading(false);
     }
   };
-
   const handleSaveDomain = async (data: { name: string; description?: string }) => {
     if (!checklistId) return;
     try {

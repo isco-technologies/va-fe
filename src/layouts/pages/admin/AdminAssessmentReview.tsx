@@ -93,6 +93,35 @@ export default function AdminAssessmentReviewPage() {
   useEffect(() => { fetchData(); }, [assessmentId]);
   useEffect(() => { setIsOpen(false); }, [currentDomainIndex]);
 
+  //  DRAFT AUTOSAVE
+  const draftKey = `finding-draft:${assessmentId}`;
+
+  // Restore saved draft when this assessment's page loads
+  useEffect(() => {
+    if (!assessmentId) return;
+    const saved = localStorage.getItem(draftKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.values) setValues(parsed.values);
+        if (parsed.selectedFields) setSelectedFields(parsed.selectedFields);
+        if (parsed.customFields) setCustomFields(parsed.customFields);
+      } catch {
+        localStorage.removeItem(draftKey);
+      }
+    }
+  }, [assessmentId]);
+
+  // Save draft on every change (debounced)
+  useEffect(() => {
+    if (!assessmentId) return;
+    const hasContent = Object.keys(values).length > 0 || customFields.length > 0;
+    if (!hasContent) return;
+    const t = setTimeout(() => {
+      localStorage.setItem(draftKey, JSON.stringify({ values, selectedFields, customFields }));
+    }, 400);
+    return () => clearTimeout(t);
+  }, [values, selectedFields, customFields, assessmentId]);
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -187,6 +216,7 @@ export default function AdminAssessmentReviewPage() {
       });
 
       setValues({});
+      localStorage.removeItem(draftKey);
       setSubmitSuccess(true);
       setTimeout(() => setSubmitSuccess(false), 3000);
     } catch (err: any) {

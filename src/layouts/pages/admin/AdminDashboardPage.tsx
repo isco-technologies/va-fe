@@ -26,10 +26,12 @@ type RecentAssessment = {
   id: string; name: string; status: string; createdAt: string;
   company: { name: string };
 };
+type FindingTrend = { month: string; current: number; prev: number };
 type DashboardResponse = {
   stats: DashboardStats;
   recentFindings: RecentFinding[];
   recentAssessments: RecentAssessment[];
+  findingTrends: FindingTrend[];
 };
 
 // CONSTANTS
@@ -250,15 +252,8 @@ export default function AdminDashboard() {
 
   const { stats, recentFindings, recentAssessments } = dashboard;
 
-  const areaData = [
-    { month: "Jan", current: 0, prev: 0 },
-    { month: "Feb", current: Math.round(stats.totalFindings * 0.3), prev: Math.round(stats.totalFindings * 0.5) },
-    { month: "Mar", current: Math.round(stats.totalFindings * 0.55), prev: Math.round(stats.totalFindings * 0.35) },
-    { month: "Apr", current: Math.round(stats.totalFindings * 0.4), prev: Math.round(stats.totalFindings * 0.6) },
-    { month: "May", current: Math.round(stats.totalFindings * 0.7), prev: Math.round(stats.totalFindings * 0.45) },
-    { month: "Jun", current: Math.round(stats.totalFindings * 0.5), prev: Math.round(stats.totalFindings * 0.3) },
-    { month: "Jul", current: stats.totalFindings, prev: Math.round(stats.totalFindings * 0.55) },
-  ];
+  // Real monthly counts from the backend (rolling window ending this month)
+  const areaData: FindingTrend[] = dashboard.findingTrends ?? [];
 
   const severityBarData = [
     { name: "Critical", value: stats.criticalFindings },
@@ -372,26 +367,32 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={areaData} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="gCurrent" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="gPrev" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#facc15" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="#facc15" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} allowDecimals={false} />
-                  <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ stroke: "#e5e7eb" }} />
-                  <Area type="monotone" dataKey="current" name="Current" stroke="#6366f1" strokeWidth={2} fill="url(#gCurrent)" dot={false} activeDot={{ r: 4, fill: "#6366f1" }} />
-                  <Area type="monotone" dataKey="prev" name="Previous" stroke="#facc15" strokeWidth={2} fill="url(#gPrev)" dot={false} activeDot={{ r: 4, fill: "#facc15" }} />
-                </AreaChart>
-              </ResponsiveContainer>
+              {areaData.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-xs text-gray-400">
+                  No findings recorded yet
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={areaData} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="gCurrent" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.15} />
+                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="gPrev" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#facc15" stopOpacity={0.15} />
+                        <stop offset="95%" stopColor="#facc15" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                    <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                    <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ stroke: "#e5e7eb" }} />
+                    <Area type="monotone" dataKey="current" name="Current" stroke="#6366f1" strokeWidth={2} fill="url(#gCurrent)" dot={false} activeDot={{ r: 4, fill: "#6366f1" }} />
+                    <Area type="monotone" dataKey="prev" name="Previous" stroke="#facc15" strokeWidth={2} fill="url(#gPrev)" dot={false} activeDot={{ r: 4, fill: "#facc15" }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </div>
 
